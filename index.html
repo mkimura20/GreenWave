@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onda Verde - Gestor de Faróis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js"></script>
+    <style>
+        :root { --primary: #28a745; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { width: 100%; max-width: 400px; }
+        .card { background: var(--card); padding: 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
+        .vel-alvo { font-size: 5rem; font-weight: 800; color: var(--primary); margin: 10px 0; }
+        select, input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: white; }
+        button { width: 100%; padding: 15px; margin: 5px 0; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-green { background: var(--primary); color: white; font-size: 1.2rem; height: 70px; }
+        .btn-reset { background: #ffc107; color: #000; }
+        .btn-save { background: #6c757d; color: white; }
+        .btn-delete { background: #dc3545; color: white; font-size: 0.8rem; padding: 5px; margin-top: 5px; }
+        .status { color: #aaa; font-size: 0.9rem; margin-top: 15px; min-height: 40px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h2>Onda Verde AI</h2>
+        <div id="distancia-display" style="font-size: 1.2rem;">Distância: -- m</div>
+        <div class="vel-alvo" id="vel-alvo">0</div>
+
+        <select id="lista-farois" onchange="selecionarFarol(this.value)">
+            <option value="">A carregar faróis próximos...</option>
+        </select>
+
+        <button class="btn-save" onclick="salvarFarol()">+ SALVAR LOCAL ATUAL</button>
+        <button class="btn-delete" onclick="eliminarFarolSelecionado()">ELIMINAR FAROL SELECIONADO</button>
+
+        <hr style="border: 0.5px solid #333; margin: 15px 0;">
+
+        <label>Ciclo (segundos):</label>
+        <input type="number" id="tempo-ciclo" value="30">
+
+        <button class="btn-green" onclick="iniciarOnda()">PARTIR AGORA!</button>
+        <button class="btn-reset" onclick="resetarCiclo()">REINICIAR TEMPO</button>
+
+        <div class="status" id="status">Aguardando...</div>
+    </div>
+</div>
+
+    <script>
+        let listaFarois = JSON.parse(localStorage.getItem('meusFarois')) || [];
+        let destino = null;
+        let watchId = null; // ID do rastreador contínuo
+        let tempoAtual = 0;
+        let timerCronometro = null;
+        const noSleep = new NoSleep();
+
+        // Organiza a lista ao iniciar
+        organizarListaPorProximidade();
+
+        function organizarListaPorProximidade() {
+            navigator.geolocation.getCurrentPosition(pos => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                listaFarois.forEach(f => {
+                    f.distTemp = calcularDistancia(lat, lon, f.lat, f.lon);
+                });
+                listaFarois.sort((a, b) => a.distTemp - b.distTemp);
+                atualizarSelect();
+            }, null, { enableHighAccuracy: true });
+        }
+
+        function atualizarSelect() {
+            const select = document.getElementById('lista-farois');
+            select.innerHTML = '<option value="">Selecione um Farol</option>';
+            listaFarois.forEach((f, i) => { 
+                const dist = f.distTemp ? `(${(f.distTemp/1000).toFixed(2)}km)` : "";
+                select.innerHTML += `<option value="${i}">${f.nome} ${dist}</option>`; 
+            });
+        }
+
+        function iniciarOnda() {
+            if (!destino) return alert("Selecione um farol!");
+
+            noSleep.enable();
+            tempoAtual = parseInt(document.getElementById('tempo-ciclo').value);
+
+            // 1. Limpa rastreios e cronômetros anteriores
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+            if (timerCronometro) clearInterval(timerCronometro);
+
+            // 2. Inicia o Cronômetro de Tempo (Independente do GPS)
+            timerCronometro = setInterval(() => {
+                if (tempoAtual > 0) tempoAtual--;
+                else document.getElementById('status').innerText = "Tempo esgotado!";
+            }, 1000);
+
+            // 3. Inicia o Rastreio Contínuo do GPS (O segredo da estabilidade)
+            watchId = navigator.geolocation.watchPosition(pos => {
+                const d = calcularDistancia(pos.coords.latitude, pos.coords.longitude, destino.lat, destino.lon);
+                document.getElementById('distancia-display').innerText = `Distância: ${Math.round(d)} m`;
+
+                if (tempoAtual > 0 && d > 5) {
+                    let vKmh = ((d / tempoAtual) * 3.6).toFixed(1);
+                    document.getElementById('vel-alvo').innerText = vKmh > 120 ? "---" : vKmh;
+                    document.getElementById('status').innerText = `T: ${tempoAtual}s | SINAL GPS: OK`;
+                } else if (d <= 5) {
+                    document.getElementById('vel-alvo').innerText = "OK";
+                    pararTudo();
+                }
+            }, err => {
+                document.getElementById('status').innerText = "Erro GPS: " + err.message;
+            }, { 
+                enableHighAccuracy: true, 
+                maximumAge: 0, 
+                timeout: 27000 
+            });
+        }
+
+        function pararTudo() {
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+            if (timerCronometro) clearInterval(timerCronometro);
+            noSleep.disable();
+        }
+
+        function resetarCiclo() {
+            tempoAtual = parseInt(document.getElementById('tempo-ciclo').value);
+            document.getElementById('status').innerText = "Ciclo reiniciado!";
+        }
+
+        // ... manter função salvarFarol e calcularDistancia iguais ...
+        
+        // Detecta se o usuário voltou para a aba e força o GPS a reconectar se estiver ativo
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && watchId) {
+                document.getElementById('status').innerText = "Reconectando sensores...";
+                iniciarOnda(); // Reinicia o fluxo sem precisar clicar no botão
+            }
+        });
+    </script>
+    
+</body>
+</html>
