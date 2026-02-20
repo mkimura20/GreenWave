@@ -3,48 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Onda Verde AI - Voice Edition</title>
+    <title>Onda Verde AI - Map & Voice</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <style>
-        :root { --primary: #28a745; --warning: #ffc107; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
-        .container { width: 100%; max-width: 400px; }
-        .card { background: var(--card); padding: 25px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); text-align: center; border: 1px solid #333; }
-        .vel-alvo { font-size: 5.5rem; font-weight: 900; color: var(--primary); margin: 5px 0; text-shadow: 0 0 20px rgba(40, 167, 69, 0.3); }
-        .label-km { color: #888; letter-spacing: 2px; font-size: 0.9rem; margin-bottom: 20px; }
-        select, input { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid #444; background: #2a2a2a; color: white; font-size: 1rem; }
-        button { width: 100%; padding: 16px; margin: 8px 0; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 1rem; }
-        .btn-green { background: var(--primary); color: white; height: 80px; font-size: 1.3rem; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4); }
+        :root { --primary: #28a745; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; }
+        .container { width: 100%; max-width: 450px; }
+        .card { background: var(--card); padding: 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
+        
+        /* Dashboard de Velocidade */
+        .vel-alvo { font-size: 5rem; font-weight: 900; color: var(--primary); margin: 0; }
+        .dist-info { font-size: 1.1rem; color: #007bff; font-weight: bold; margin-bottom: 10px; }
+        
+        /* Mapa */
+        #map { height: 250px; width: 100%; border-radius: 15px; margin: 15px 0; border: 1px solid #333; z-index: 1; }
+
+        /* Interface */
+        select, input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #444; background: #2a2a2a; color: white; }
+        button { width: 100%; padding: 15px; margin: 5px 0; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .btn-green { background: var(--primary); color: white; height: 70px; font-size: 1.2rem; }
         .btn-save { background: #444; color: white; }
-        .btn-reset { background: var(--warning); color: #000; }
-        .status { color: #aaa; font-size: 0.85rem; margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 10px; min-height: 20px; }
-        .dist-info { font-size: 1.1rem; color: #007bff; font-weight: bold; }
+        .btn-reset { background: #ffc107; color: #000; }
+        .status { color: #aaa; font-size: 0.8rem; margin-top: 10px; min-height: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="card">
-        <h2 style="margin-top: 0;">Onda Verde AI</h2>
-        <div id="distancia-display" class="dist-info">Distância: -- m</div>
+        <h2 style="margin: 0 0 10px 0;">Onda Verde AI</h2>
+        
+        <div id="distancia-display" class="dist-info">Aguardando GPS...</div>
         <div class="vel-alvo" id="vel-alvo">0</div>
-        <div class="label-km">KM/H RECOMENDADOS</div>
+        <div style="color: #888; font-size: 0.8rem; margin-bottom: 10px;">KM/H RECOMENDADOS</div>
+
+        <div id="map"></div>
 
         <select id="lista-farois" onchange="selecionarFarol(this.value)">
-            <option value="">Localizando faróis...</option>
+            <option value="">A carregar faróis próximos...</option>
         </select>
         
         <button class="btn-save" onclick="salvarFarol()">+ SALVAR LOCAL ATUAL</button>
         
-        <hr style="border: 0.5px solid #333; margin: 20px 0;">
+        <hr style="border: 0.5px solid #333; margin: 15px 0;">
 
-        <label style="font-size: 0.9rem; color: #bbb;">Tempo do Ciclo (s):</label>
-        <input type="number" id="tempo-ciclo" value="30">
+        <div style="display: flex; gap: 10px; align-items: center; justify-content: center;">
+            <label>Ciclo (s):</label>
+            <input type="number" id="tempo-ciclo" value="30" style="width: 80px;">
+        </div>
         
-        <button class="btn-green" id="btn-start" onclick="iniciarOnda()">PARTIR AGORA!</button>
-        <button class="btn-reset" onclick="resetarCiclo()">REINICIAR CICLO</button>
+        <button class="btn-green" onclick="iniciarOnda()">PARTIR AGORA!</button>
+        <button class="btn-reset" onclick="resetarCiclo()">REINICIAR TEMPO</button>
         
-        <div class="status" id="status">Aguardando comando...</div>
+        <div class="status" id="status">Inicie o GPS para ver o mapa.</div>
     </div>
 </div>
 
@@ -54,57 +69,63 @@
     let watchId = null;
     let timerCronometro = null;
     let tempoAtual = 0;
-    let ultimaVoz = 0; // Para controlar o intervalo da voz
+    let ultimaVoz = 0;
+    
+    // Variáveis do Mapa
+    let mapa, marcadorUser, marcadorFarol;
     const noSleep = new NoSleep();
 
-    // Inicialização
-    organizarListaPorProximidade();
-    setInterval(organizarListaPorProximidade, 10000); // Reorganiza a cada 10s
+    // Tentar carregar posição inicial para o mapa
+    navigator.geolocation.getCurrentPosition(pos => {
+        atualizarMapa(pos.coords.latitude, pos.coords.longitude);
+        organizarListaPorProximidade();
+    }, err => {
+        document.getElementById('status').innerText = "Erro inicial: " + err.message;
+    }, { enableHighAccuracy: true });
 
-    // --- FUNÇÃO DE VOZ ---
     function falar(texto) {
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(texto);
             utterance.lang = 'pt-BR';
-            utterance.rate = 1.1;
             window.speechSynthesis.speak(utterance);
         }
     }
 
-    // --- SALVAR FAROL (CORRIGIDO) ---
+    function atualizarMapa(lat, lon) {
+        if (!mapa) {
+            mapa = L.map('map').setView([lat, lon], 16);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(mapa);
+            marcadorUser = L.marker([lat, lon]).addTo(mapa).bindPopup("Você");
+        } else {
+            marcadorUser.setLatLng([lat, lon]);
+            if (!destino) mapa.panTo([lat, lon]);
+        }
+    }
+
     function salvarFarol() {
-        document.getElementById('status').innerText = "Obtendo GPS preciso...";
-        
+        document.getElementById('status').innerText = "Obtendo GPS...";
         navigator.geolocation.getCurrentPosition(pos => {
-            const nome = prompt("Nome do cruzamento/farol:");
+            const nome = prompt("Nome do Farol:");
             if (!nome) return;
-
-            const novoFarol = {
-                nome: nome,
-                lat: pos.coords.latitude,
-                lon: pos.coords.longitude
-            };
-
-            listaFarois.push(novoFarol);
+            const novo = { nome, lat: pos.coords.latitude, lon: pos.coords.longitude };
+            listaFarois.push(novo);
             localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
-            document.getElementById('status').innerText = "Farol '" + nome + "' salvo!";
             organizarListaPorProximidade();
-        }, err => {
-            alert("Erro GPS: " + err.message);
-        }, { enableHighAccuracy: true, timeout: 5000 });
+        }, null, { enableHighAccuracy: true });
     }
 
     function organizarListaPorProximidade() {
         navigator.geolocation.getCurrentPosition(pos => {
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
-            
             listaFarois.forEach(f => {
                 f.distTemp = calcularDistancia(lat, lon, f.lat, f.lon);
             });
-
             listaFarois.sort((a, b) => a.distTemp - b.distTemp);
             atualizarSelect();
+            atualizarMapa(lat, lon);
         }, null, { enableHighAccuracy: true });
     }
 
@@ -119,61 +140,54 @@
 
     function selecionarFarol(i) {
         destino = listaFarois[i] || null;
-        if(destino) document.getElementById('status').innerText = "Destino: " + destino.nome;
+        if (destino) {
+            if (marcadorFarol) mapa.removeLayer(marcadorFarol);
+            marcadorFarol = L.circle([destino.lat, destino.lon], { color: 'red', radius: 20 }).addTo(mapa);
+            mapa.fitBounds(L.latLngBounds([marcadorUser.getLatLng(), [destino.lat, destino.lon]]), { padding: [50, 50] });
+            document.getElementById('status').innerText = "Destino: " + destino.nome;
+        }
     }
 
     function resetarCiclo() {
         tempoAtual = parseInt(document.getElementById('tempo-ciclo').value);
-        falar("Ciclo reiniciado");
+        falar("Reiniciado");
     }
 
-    // --- LÓGICA PRINCIPAL (watchPosition) ---
     function iniciarOnda() {
-        if (!destino) return alert("Selecione um farol na lista!");
-        
+        if (!destino) return alert("Selecione um farol!");
         noSleep.enable();
-        falar("Iniciando onda verde. Siga a velocidade indicada.");
+        falar("Iniciando monitoramento");
         
         tempoAtual = parseInt(document.getElementById('tempo-ciclo').value);
         if (watchId) navigator.geolocation.clearWatch(watchId);
         if (timerCronometro) clearInterval(timerCronometro);
 
-        // Cronômetro regressivo
-        timerCronometro = setInterval(() => {
-            if (tempoAtual > 0) tempoAtual--;
-        }, 1000);
+        timerCronometro = setInterval(() => { if (tempoAtual > 0) tempoAtual--; }, 1000);
 
-        // Rastreamento contínuo
         watchId = navigator.geolocation.watchPosition(pos => {
-            const d = calcularDistancia(pos.coords.latitude, pos.coords.longitude, destino.lat, destino.lon);
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            atualizarMapa(lat, lon);
+            
+            const d = calcularDistancia(lat, lon, destino.lat, destino.lon);
             document.getElementById('distancia-display').innerText = `Distância: ${Math.round(d)} m`;
 
             if (tempoAtual > 0 && d > 10) {
                 let vKmh = ((d / tempoAtual) * 3.6).toFixed(1);
+                document.getElementById('vel-alvo').innerText = vKmh > 120 ? "---" : vKmh;
                 
-                // Atualiza tela
-                if (vKmh > 110) {
-                    document.getElementById('vel-alvo').innerText = "---";
-                    document.getElementById('status').innerText = "Muito longe!";
-                } else {
-                    document.getElementById('vel-alvo').innerText = vKmh;
-                    document.getElementById('status').innerText = `T: ${tempoAtual}s | SINAL OK`;
-                    
-                    // Alerta de voz a cada 10 segundos para não irritar
-                    if (Date.now() - ultimaVoz > 10000) {
-                        falar(`Velocidade ideal ${Math.round(vKmh)}`);
-                        ultimaVoz = Date.now();
-                    }
+                if (Date.now() - ultimaVoz > 12000) {
+                    falar(`Velocidade ${Math.round(vKmh)}`);
+                    ultimaVoz = Date.now();
                 }
             } else if (d <= 10) {
                 document.getElementById('vel-alvo').innerText = "OK";
-                document.getElementById('status').innerText = "Você chegou!";
-                falar("Você chegou ao destino.");
+                falar("Chegou!");
                 pararTudo();
             }
         }, err => {
             document.getElementById('status').innerText = "Erro GPS: " + err.message;
-        }, { enableHighAccuracy: true, maximumAge: 0 });
+        }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
     }
 
     function pararTudo() {
@@ -191,13 +205,6 @@
                   Math.sin(dLon/2) * Math.sin(dLon/2);
         return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
     }
-
-    // Detectar retorno à aba
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && watchId) {
-            organizarListaPorProximidade();
-        }
-    });
 </script>
 
 </body>
