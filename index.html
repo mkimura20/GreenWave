@@ -1,44 +1,49 @@
 <!DOCTYPE html>
-<html lang="pt-pt">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Onda Verde AI - Auto-Drive Edition</title>
+    <title>Onda Verde AI - Edição Brasil</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --primary: #28a745; --warning: #ffc107; --danger: #dc3545; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; overflow-x: hidden; }
+        :root { --primary: #28a745; --warning: #ffc107; --danger: #dc3545; --bg: #121212; --card: #1e1e1e; --text: #ffffff; --blue: #007bff; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; }
         .container { width: 100%; max-width: 450px; }
         .card { background: var(--card); padding: 15px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
         
-        .vel-alvo { font-size: 5.5rem; font-weight: 900; color: var(--primary); margin: 0; line-height: 1; }
-        
-        .progress-container { width: 100%; height: 12px; background: #333; border-radius: 6px; margin: 15px 0; overflow: hidden; border: 1px solid #444; }
-        .progress-bar { height: 100%; width: 0%; transition: width 0.3s linear, background-color 0.5s; }
+        .vel-alvo { font-size: 5.5rem; font-weight: 900; color: var(--primary); margin: 5px 0; line-height: 1; }
+        .progress-container { width: 100%; height: 14px; background: #333; border-radius: 7px; margin: 15px 0; overflow: hidden; border: 1px solid #444; }
+        .progress-bar { height: 100%; width: 0%; transition: width 0.3s linear; }
 
-        .auto-status { font-size: 0.7rem; color: #28a745; margin-bottom: 5px; font-weight: bold; display: none; }
+        #map { height: 160px; width: 100%; border-radius: 15px; margin: 12px 0; border: 1px solid #333; }
+        
+        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 10px 0; }
+        .grid-inputs div { display: flex; flex-direction: column; font-size: 0.7rem; color: #888; }
+        
+        .flex-buttons { display: flex; gap: 8px; margin-bottom: 8px; }
+        input, select { padding: 10px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: white; text-align: center; font-size: 1rem; width: 100%; box-sizing: border-box; }
+        
+        button { width: 100%; padding: 14px; margin: 4px 0; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
+        .btn-master { background: var(--primary); color: white; font-size: 1.1rem; height: 60px; }
+        .btn-sync { background: var(--warning); color: #000; flex: 2; }
+        .btn-fino { background: #333; color: white; flex: 1; }
+        .btn-save { background: var(--blue); color: white; }
+        
+        .backup-zone { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; border-top: 1px solid #333; padding-top: 15px; }
+        .btn-backup { background: #444; color: #ccc; font-size: 0.7rem; padding: 10px; }
+        .btn-delete { background: transparent; color: var(--danger); font-size: 0.7rem; border: 1px solid var(--danger); grid-column: span 2; }
 
-        #map { height: 150px; width: 100%; border-radius: 15px; margin: 10px 0; border: 1px solid #333; }
-        
-        .inputs-ciclo { display: flex; gap: 8px; justify-content: center; margin: 10px 0; }
-        .inputs-ciclo div { display: flex; flex-direction: column; font-size: 0.75rem; color: #bbb; }
-        input, select { padding: 8px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: white; text-align: center; font-size: 0.9rem; }
-        
-        button { width: 100%; padding: 12px; margin: 4px 0; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
-        .btn-green { background: var(--primary); color: white; height: 55px; }
-        .btn-sync { background: var(--warning); color: #000; }
-        .btn-fino { background: #333; color: white; width: 45px; padding: 8px; }
-        .status { color: #888; font-size: 0.75rem; margin-top: 8px; }
+        .auto-status { font-size: 0.75rem; color: var(--primary); font-weight: bold; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="card">
-        <div id="auto-msg" class="auto-status">● MODO AUTO-TRAJETO ATIVO</div>
-        <div id="distancia-display" style="font-weight: bold; color: #007bff; font-size: 0.9rem;">À PROCURA DE FARÓIS...</div>
+        <div id="auto-msg" class="auto-status">● GPS PRONTO</div>
+        <div id="dist-label" style="font-weight: bold; color: var(--blue);">LOCALIZANDO FARÓIS...</div>
         
         <div class="vel-alvo" id="vel-alvo">0</div>
         
@@ -46,29 +51,37 @@
             <div id="barra-ciclo" class="progress-bar"></div>
         </div>
 
-        <div id="fase-label" style="font-weight: bold; font-size: 0.8rem;">SINCRONIA INTELIGENTE</div>
+        <div id="fase-label" style="font-weight: bold; color: #888; font-size: 0.8rem;">AGUARDANDO INÍCIO</div>
 
         <div id="map"></div>
 
-        <select id="lista-farois" onchange="selecionarFarolManual(this.value)" style="width: 100%; margin-bottom: 5px;">
-            <option value="">A carregar base de dados...</option>
+        <select id="lista-farois" onchange="selecionarFarolManual(this.value)">
+            <option value="">Selecione um ponto...</option>
         </select>
 
-        <div class="inputs-ciclo">
-            <div> Verde(s) <input type="number" id="t-verde" value="30"> </div>
-            <div> Verm(s) <input type="number" id="t-vermelho" value="30"> </div>
-            <div> Buffer(s) <input type="number" id="t-buffer" value="2"> </div>
+        <div class="grid-inputs">
+            <div>Verde (s)<input type="number" id="t-verde" value="30"></div>
+            <div>Verm (s)<input type="number" id="t-vermelho" value="30"></div>
+            <div>Buffer (s)<input type="number" id="t-buffer" value="2"></div>
         </div>
 
-        <div style="display: flex; gap: 5px; justify-content: center; margin-bottom: 5px;">
+        <div class="flex-buttons">
             <button class="btn-fino" onclick="ajusteFino(-1000)">-1s</button>
-            <button class="btn-sync" style="flex-grow: 1;" onclick="sincronizarAgora()">SINCRONIZAR ABERTURA</button>
+            <button class="btn-sync" onclick="sincronizarAgora()">SINCRONIZAR VERDE</button>
             <button class="btn-fino" onclick="ajusteFino(1000)">+1s</button>
         </div>
         
-        <button class="btn-green" id="btn-master" onclick="toggleMonitoramento()">ATIVAR MONITORIZAÇÃO</button>
+        <button class="btn-master" id="btn-master" onclick="toggleMonitoramento()">ATIVAR MONITORAMENTO</button>
+        <button class="btn-save" onclick="salvarFarol()">+ SALVAR LOCAL ATUAL</button>
         
-        <div class="status" id="status">O app seleciona o próximo farol automaticamente.</div>
+        <div class="backup-zone">
+            <button class="btn-backup" onclick="exportarBackup()">📤 EXPORTAR BACKUP</button>
+            <button class="btn-backup" onclick="document.getElementById('input-file').click()">📥 IMPORTAR BACKUP</button>
+            <input type="file" id="input-file" style="display:none" onchange="importarBackup(event)">
+            <button class="btn-delete" onclick="eliminarFarol()">APAGAR FAROL SELECIONADO</button>
+        </div>
+
+        <div id="status" style="font-size: 0.7rem; color: #666; margin-top: 10px;">Raio de busca: 800m</div>
     </div>
 </div>
 
@@ -91,17 +104,64 @@
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(texto);
-            u.lang = 'pt-PT';
+            u.lang = 'pt-BR';
             window.speechSynthesis.speak(u);
         }
     }
 
     function atualizarSelect() {
         const select = document.getElementById('lista-farois');
-        select.innerHTML = '<option value="">Faróis Guardados</option>';
+        select.innerHTML = '<option value="">Lista de Faróis Salvos</option>';
         listaFarois.forEach((f, i) => {
             select.innerHTML += `<option value="${i}">${f.nome}</option>`;
         });
+    }
+
+    function salvarFarol() {
+        navigator.geolocation.getCurrentPosition(pos => {
+            const nome = prompt("Nome do Farol:");
+            if (!nome) return;
+            const novo = { 
+                nome, 
+                lat: pos.coords.latitude, 
+                lon: pos.coords.longitude,
+                tVerde: document.getElementById('t-verde').value,
+                tVermelho: document.getElementById('t-vermelho').value,
+                refSync: Date.now()
+            };
+            listaFarois.push(novo);
+            localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
+            atualizarSelect();
+            falar("Farol salvo com sucesso.");
+        }, null, { enableHighAccuracy: true });
+    }
+
+    function exportarBackup() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(listaFarois));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "backup_farois.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    }
+
+    function importarBackup(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importados = JSON.parse(e.target.result);
+                listaFarois = importados;
+                localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
+                atualizarSelect();
+                alert("Backup importado com sucesso!");
+            } catch (err) {
+                alert("Erro ao ler o arquivo de backup.");
+            }
+        };
+        reader.readAsText(file);
     }
 
     function selecionarFarolManual(i) {
@@ -117,15 +177,14 @@
         if (marcadorFarol) mapa.removeLayer(marcadorFarol);
         marcadorFarol = L.circle([destino.lat, destino.lon], { color: 'red', radius: 25 }).addTo(mapa);
         mapa.panTo([destino.lat, destino.lon]);
-        document.getElementById('auto-msg').innerText = `● SELECIONADO: ${destino.nome.toUpperCase()}`;
-        document.getElementById('auto-msg').style.display = 'block';
+        document.getElementById('auto-msg').innerText = `● ALVO: ${destino.nome.toUpperCase()}`;
     }
 
     function sincronizarAgora() {
-        if (!destino) return alert("Selecione um farol!");
+        if (!destino) return alert("Selecione um farol primeiro!");
         destino.refSync = Date.now();
         salvarNoStorage();
-        falar("Sincronia guardada.");
+        falar("Sincronizado");
     }
 
     function ajusteFino(ms) {
@@ -139,16 +198,25 @@
         localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
     }
 
+    function eliminarFarol() {
+        const i = document.getElementById('lista-farois').value;
+        if (i === "" || !confirm("Deseja apagar este farol?")) return;
+        listaFarois.splice(i, 1);
+        localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
+        destino = null;
+        atualizarSelect();
+    }
+
     function toggleMonitoramento() {
         if (monitorando) {
             navigator.geolocation.clearWatch(watchId);
             monitorando = false;
-            document.getElementById('btn-master').innerText = "ATIVAR MONITORIZAÇÃO";
+            document.getElementById('btn-master').innerText = "ATIVAR MONITORAMENTO";
             document.getElementById('btn-master').style.background = "var(--primary)";
             noSleep.disable();
         } else {
             monitorando = true;
-            document.getElementById('btn-master').innerText = "PARAR MONITORIZAÇÃO";
+            document.getElementById('btn-master').innerText = "PARAR MONITORAMENTO";
             document.getElementById('btn-master').style.background = "var(--danger)";
             noSleep.enable();
             iniciarGPS();
@@ -160,84 +228,65 @@
             const lat = pos.coords.latitude, lon = pos.coords.longitude;
             marcadorUser.setLatLng([lat, lon]);
 
-            // LÓGICA DE CARREGAMENTO AUTOMÁTICO
-            // Se não temos destino ou o destino atual está longe (>800m), procura o mais próximo à frente
             if (!destino || calcularDistancia(lat, lon, destino.lat, destino.lon) > 800) {
-                encontrarProximoFarolNoTrajeto(lat, lon);
+                let candidatos = listaFarois.map(f => ({...f, d: calcularDistancia(lat, lon, f.lat, f.lon)}))
+                                         .filter(c => c.d < 800)
+                                         .sort((a,b) => a.d - b.d);
+                if (candidatos.length > 0) {
+                    destino = candidatos[0];
+                    carregarDadosDestino();
+                    falar("Aproximando de " + destino.nome);
+                }
             }
 
             if (destino) {
                 const d = calcularDistancia(lat, lon, destino.lat, destino.lon);
-                document.getElementById('distancia-display').innerText = `${destino.nome.toUpperCase()} • ${Math.round(d)}M`;
-
-                // Se passou pelo farol (<15m), limpa para procurar o próximo
+                document.getElementById('dist-label').innerText = `${Math.round(d)} METROS`;
+                
                 if (d < 15) {
-                    falar("Passou por " + destino.nome);
+                    falar("Farol ultrapassado.");
                     destino = null;
                     return;
                 }
 
-                processarCalculosOnda(d);
+                const tV = parseInt(document.getElementById('t-verde').value) * 1000;
+                const tR = parseInt(document.getElementById('t-vermelho').value) * 1000;
+                const tB = parseInt(document.getElementById('t-buffer').value) * 1000;
+                const total = tV + tR;
+                
+                let rel = (Date.now() - (destino.refSync || Date.now())) % total;
+                if (rel < 0) rel += total;
+
+                let tAlvo, modo, pct;
+                const barra = document.getElementById('barra-ciclo');
+
+                if (rel < tV) {
+                    tAlvo = (tV - rel) / 1000;
+                    modo = "VERDE";
+                    pct = (1 - (rel / tV)) * 100;
+                    barra.style.backgroundColor = "var(--primary)";
+                } else {
+                    tAlvo = ((total - rel) + tB) / 1000;
+                    modo = "VERMELHO";
+                    pct = ((rel - tV) / tR) * 100;
+                    barra.style.backgroundColor = "var(--warning)";
+                }
+
+                barra.style.width = pct + "%";
+                const vDisplay = document.getElementById('vel-alvo');
+                let vKmh = ((d / tAlvo) * 3.6).toFixed(1);
+
+                vDisplay.innerText = (vKmh > 115 || vKmh < 5) ? "---" : Math.round(vKmh);
+                vDisplay.style.color = (modo === "VERDE") ? "var(--primary)" : "var(--warning)";
+                document.getElementById('fase-label').innerText = `${modo} • RESTAM ${Math.round(tAlvo)}S`;
+                document.getElementById('fase-label').style.color = vDisplay.style.color;
+
+                if (Date.now() - ultimaVoz > 15000 && vKmh < 115 && vKmh > 10) {
+                    falar(`Velocidade ${Math.round(vKmh)}`);
+                    ultimaVoz = Date.now();
+                }
             }
         }, null, { enableHighAccuracy: true });
-    }
-
-    function encontrarProximoFarolNoTrajeto(lat, lon) {
-        let candidatos = listaFarois.map(f => ({
-            ...f,
-            dist: calcularDistancia(lat, lon, f.lat, f.lon)
-        }));
-
-        // Filtra faróis num raio de 800m
-        candidatos = candidatos.filter(c => c.dist < 800);
-        candidatos.sort((a, b) => a.dist - b.dist);
-
-        if (candidatos.length > 0) {
-            destino = candidatos[0];
-            carregarDadosDestino();
-            falar("A aproximar de " + destino.nome);
-        }
-    }
-
-    function processarCalculosOnda(distancia) {
-        const tV = parseInt(document.getElementById('t-verde').value) * 1000;
-        const tR = parseInt(document.getElementById('t-vermelho').value) * 1000;
-        const tBuffer = parseInt(document.getElementById('t-buffer').value) * 1000;
-        const cicloTotal = tV + tR;
-        
-        const ref = destino.refSync || Date.now();
-        let tempoRelativo = (Date.now() - ref) % cicloTotal;
-        if (tempoRelativo < 0) tempoRelativo += cicloTotal;
-
-        const barra = document.getElementById('barra-ciclo');
-        let tempoAlvo, modo, percent;
-
-        if (tempoRelativo < tV) {
-            tempoAlvo = (tV - tempoRelativo) / 1000;
-            modo = "VERDE";
-            percent = (1 - (tempoRelativo / tV)) * 100;
-            barra.style.backgroundColor = "var(--primary)";
-        } else {
-            tempoAlvo = ((cicloTotal - tempoRelativo) + tBuffer) / 1000;
-            modo = "VERMELHO";
-            percent = ((tempoRelativo - tV) / tR) * 100;
-            barra.style.backgroundColor = "var(--warning)";
-        }
-
-        barra.style.width = percent + "%";
-        const velDisplay = document.getElementById('vel-alvo');
-        const faseLabel = document.getElementById('fase-label');
-        
-        let vKmh = ((distancia / tempoAlvo) * 3.6).toFixed(1);
-        velDisplay.innerText = vKmh > 125 ? "---" : vKmh;
-        velDisplay.style.color = (modo === "VERDE") ? "var(--primary)" : "var(--warning)";
-        faseLabel.innerText = `${modo} • ${Math.round(tempoAlvo)}s`;
-        faseLabel.style.color = velDisplay.style.color;
-
-        if (Date.now() - ultimaVoz > 15000 && vKmh <= 125 && vKmh > 10) {
-            falar(`Mantenha ${Math.round(vKmh)}`);
-            ultimaVoz = Date.now();
-        }
     }
 
     function calcularDistancia(lat1, lon1, lat2, lon2) {
