@@ -3,22 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Onda Verde AI - Inertia Edition</title>
+    <title>Onda Verde AI - Ultimate Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #050505;
-            --card-bg: #121212;
-            --accent-green: #00ff6a;
-            --accent-yellow: #ffcc00;
-            --accent-red: #ff3b3b;
-            --accent-blue: #0088ff;
-            --text-color: #ffffff;
+            --bg: #050505;
+            --card: #121212;
+            --green: #00ff6a;
+            --yellow: #ffcc00;
+            --red: #ff3b3b;
+            --blue: #0088ff;
+            --text: #ffffff;
+            --tolerance-ok: #00ff6a;
+            --tolerance-warn: #ffcc00;
+            --tolerance-bad: #ff3b3b;
         }
 
         body {
-            background: var(--bg-color);
-            color: var(--text-color);
+            background: var(--bg);
+            color: var(--text);
             font-family: 'Inter', sans-serif;
             margin: 0;
             display: flex;
@@ -31,73 +34,49 @@
         #app-container { width: 90%; max-width: 420px; }
 
         .main-card {
-            background: var(--card-bg);
+            background: var(--card);
             border-radius: 40px;
             padding: 30px;
             text-align: center;
-            border: 1px solid #222;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            border: 2px solid #222;
+            transition: border-color 0.5s ease;
         }
 
-        .header-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        #phase-dot {
-            width: 12px; height: 12px; border-radius: 50%;
-            display: inline-block; margin-right: 5px;
-            box-shadow: 0 0 10px currentColor;
-        }
+        .header-info { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px; font-weight: bold; }
+        #phase-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 10px currentColor; }
 
         .target-label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 2px; }
-        .target-speed { font-size: 100px; font-weight: 900; color: var(--accent-green); line-height: 0.9; }
+        .target-speed { font-size: 100px; font-weight: 900; color: var(--green); line-height: 0.9; transition: color 0.3s; }
         .unit { font-size: 20px; color: #333; font-weight: bold; }
 
         .gauge-area { margin: 30px 0; position: relative; }
-        .track { height: 8px; background: #222; border-radius: 4px; position: relative; overflow: hidden; }
-        #current-speed-bar { height: 100%; width: 0%; background: var(--accent-blue); transition: width 0.2s linear; }
-        #target-marker {
-            position: absolute; top: -4px; width: 4px; height: 16px;
-            background: white; border-radius: 2px; box-shadow: 0 0 10px white;
-        }
+        .track { height: 10px; background: #222; border-radius: 5px; position: relative; overflow: hidden; }
+        #current-speed-bar { height: 100%; width: 0%; background: var(--blue); transition: width 0.2s linear; }
+        #target-marker { position: absolute; top: -5px; width: 6px; height: 20px; background: white; border-radius: 3px; box-shadow: 0 0 15px white; transition: left 0.5s cubic-bezier(0.1, 0, 0.3, 1); }
 
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 25px 0; }
         .stat-box { background: #1a1a1a; padding: 15px; border-radius: 20px; border: 1px solid #252525; }
         .stat-val { display: block; font-size: 22px; font-weight: bold; margin-top: 5px; }
 
-        .economy-footer {
-            background: rgba(0, 255, 106, 0.05);
-            border: 1px dashed var(--accent-green);
-            border-radius: 25px; padding: 15px;
-            display: flex; justify-content: space-around;
-        }
-        .eco-val { color: var(--accent-green); font-weight: bold; display: block; }
-
         .btn-group { margin-top: 20px; display: flex; gap: 10px; }
-        button {
-            flex: 1; padding: 15px; border-radius: 15px; border: none;
-            font-weight: bold; cursor: pointer; transition: 0.3s;
-            background: #222; color: white;
-        }
-        #btn-sim { border: 1px solid var(--accent-blue); color: var(--accent-blue); }
+        button { flex: 1; padding: 18px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; background: #222; color: white; }
+        #btn-sim { border: 1px solid var(--blue); color: var(--blue); }
+        
+        .feedback-label { font-size: 12px; margin-top: 10px; font-weight: bold; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
 <div id="app-container">
-    <div class="main-card">
+    <div class="main-card" id="ui-card">
         <div class="header-info">
-            <span><span id="phase-dot"></span> <span id="phase-text">PREDICTING</span></span>
-            <span id="route-type">CRUISE MODE</span>
+            <span><span id="phase-dot"></span> <span id="phase-text">ANALYZING</span></span>
+            <span id="ui-mode-text">IDLE</span>
         </div>
 
         <span class="target-label">Constant Target</span>
         <div class="target-speed" id="ui-target-speed">--</div>
-        <span class="unit">KM/H</span>
+        <span id="ui-feedback" class="feedback-label">MATCH SPEED</span>
 
         <div class="gauge-area">
             <div class="track"><div id="current-speed-bar"></div></div>
@@ -110,142 +89,134 @@
                 <span id="ui-distance" class="stat-val">-- m</span>
             </div>
             <div class="stat-box">
-                <span class="target-label">Road Limit</span>
+                <span class="target-label">Limit</span>
                 <span id="ui-limit" class="stat-val">-- km/h</span>
             </div>
-        </div>
-
-        <div class="economy-footer">
-            <div><span class="target-label">Saved Fuel</span><span id="ui-fuel" class="eco-val">0.00 L</span></div>
-            <div><span class="target-label">Saved Money</span><span id="ui-money" class="eco-val">€ 0.00</span></div>
         </div>
     </div>
 
     <div class="btn-group">
-        <button id="btn-sim" onclick="toggleSimulation()">SIMULATION MODE</button>
-        <button onclick="resyncCycle()">SIGNAL GREEN NOW</button>
+        <button id="btn-sim" onclick="toggleSimulation()">START SIMULATION</button>
+        <button onclick="resyncCycle()">GREEN LIGHT NOW</button>
     </div>
 </div>
 
 <script>
-    /**
-     * ONDA VERDE AI - INERTIA & PREDICTIVE ENGINE
-     * Focus: Constant speed, minimum braking, heavy vehicle physics.
-     */
-
     // Configuration
     const LIGHT_CYCLES = { green: 25, yellow: 4, red: 20 };
     const SPEED_BUFFER = 2.5; 
-    const MAX_ACCEL_STEP = 0.3; // Maximum speed change per tick (Inertia Filter)
-    const DECISION_HORIZON = 600; // Start planning far away
+    const INERTIA_STEP = 0.4; // Smoothing for truck acceleration
+    const SECTOR_THRESHOLD = 400; // Distance to switch from cruise to precision
 
-    // State Variables
-    let isSimulationActive = false;
-    let truckDistance = 800; 
-    let truckSpeed = 50 / 3.6; // m/s
-    let roadSpeedLimit = 80; // km/h
-    let cycleStartTime = Date.now() / 1000;
-    
-    // Prediction Smoothing
-    let currentTargetKmh = 0;
-    let fuelSavedTotal = 0;
+    // State
+    let isSimMode = false;
+    let truckDist = 900; 
+    let truckKmh = 75; // Starting at 75km/h
+    let roadLimit = 80;
+    let cycleStart = Date.now() / 1000;
+    let smoothedTargetKmh = 0;
 
     function toggleSimulation() {
-        isSimulationActive = !isSimulationActive;
-        document.getElementById('btn-sim').innerText = isSimulationActive ? "STOP SIM" : "SIMULATION MODE";
+        isSimMode = !isSimMode;
+        document.getElementById('btn-sim').innerText = isSimMode ? "STOP SIM" : "START SIMULATION";
     }
 
-    function resyncCycle() {
-        cycleStartTime = Date.now() / 1000;
-    }
+    function resyncCycle() { cycleStart = Date.now() / 1000; }
 
-    /**
-     * PREDICTIVE BRAIN: Looks at multiple cycles and chooses the one
-     * requiring the LEAST speed change (preserving momentum).
-     */
-    function predictBestConstantSpeed(dist, elapsed, limit) {
-        const totalCycle = LIGHT_CYCLES.green + LIGHT_CYCLES.yellow + LIGHT_CYCLES.red;
+    function predictSectorSpeed(dist, elapsed, limit) {
+        const total = LIGHT_CYCLES.green + LIGHT_CYCLES.yellow + LIGHT_CYCLES.red;
+        const isFar = dist > SECTOR_THRESHOLD;
         let candidates = [];
 
         for (let i = 0; i < 3; i++) {
-            let cycleOffset = i * totalCycle;
-            
-            // Window 1: Catching the GREEN
-            let timeToGreenStart = cycleOffset + (totalCycle - elapsed) + SPEED_BUFFER;
-            let timeToGreenEnd = cycleOffset + (totalCycle - elapsed) + LIGHT_CYCLES.green - SPEED_BUFFER;
+            let offset = i * total;
+            let toGreen = offset + (total - elapsed) + SPEED_BUFFER;
+            let toRed = offset + (total - elapsed) + LIGHT_CYCLES.green - SPEED_BUFFER;
 
-            // If we are currently in GREEN
             if (i === 0 && elapsed < LIGHT_CYCLES.green) {
-                timeToGreenStart = 0;
-                timeToGreenEnd = (LIGHT_CYCLES.green - elapsed) - SPEED_BUFFER;
+                toGreen = 0;
+                toRed = (LIGHT_CYCLES.green - elapsed) - SPEED_BUFFER;
             }
 
-            // Calculate necessary speeds for this window
-            let minSpeed = (dist / (timeToGreenEnd > 0 ? timeToGreenEnd : 0.1)) * 3.6;
-            let maxSpeed = (dist / (timeToGreenStart > 0 ? timeToGreenStart : 0.1)) * 3.6;
+            let minS = (dist / (toRed > 0 ? toRed : 0.1)) * 3.6;
+            let maxS = (dist / (toGreen > 0 ? toGreen : 0.1)) * 3.6;
 
-            // Check if this window is viable within road limits
-            if (minSpeed <= limit && maxSpeed >= 20) {
-                // Aim for a comfortable speed within this window
-                let idealInWindow = Math.min(limit, maxSpeed);
-                candidates.push(idealInWindow);
+            if (minS <= limit && maxS >= 20) {
+                // If far, we want the highest legal speed to maintain momentum
+                // If close, we want the average speed of that window
+                let ideal = isFar ? Math.min(limit, maxS * 0.98) : Math.min(limit, (minS + maxS) / 2);
+                candidates.push(ideal);
             }
         }
 
         if (candidates.length > 0) {
-            let currentKmh = truckSpeed * 3.6;
-            // Sort by proximity to current speed to minimize shifting
-            candidates.sort((a, b) => Math.abs(a - currentKmh) - Math.abs(b - currentKmh));
+            // Far: pick highest. Close: pick closest to current speed
+            if (isFar) candidates.sort((a,b) => b - a);
+            else candidates.sort((a,b) => Math.abs(a - truckKmh) - Math.abs(b - truckKmh));
             return candidates[0];
         }
-
-        return limit * 0.75;
+        return limit; 
     }
 
     function updateApp() {
-        if (!isSimulationActive) return;
+        if (!isSimMode) return;
 
-        const totalCycle = LIGHT_CYCLES.green + LIGHT_CYCLES.yellow + LIGHT_CYCLES.red;
-        const elapsed = (Date.now() / 1000 - cycleStartTime) % totalCycle;
+        const total = LIGHT_CYCLES.green + LIGHT_CYCLES.yellow + LIGHT_CYCLES.red;
+        const elapsed = (Date.now() / 1000 - cycleStart) % total;
 
-        // 1. Determine Phase
+        // 1. Phase Logic
         let phase = ""; let color = "";
-        if (elapsed < LIGHT_CYCLES.green) { phase = "GREEN"; color = "var(--accent-green)"; }
-        else if (elapsed < LIGHT_CYCLES.green + LIGHT_CYCLES.yellow) { phase = "YELLOW"; color = "var(--accent-yellow)"; }
-        else { phase = "RED"; color = "var(--accent-red)"; }
+        if (elapsed < LIGHT_CYCLES.green) { phase = "GREEN"; color = "var(--green)"; }
+        else if (elapsed < LIGHT_CYCLES.green + LIGHT_CYCLES.yellow) { phase = "YELLOW"; color = "var(--yellow)"; }
+        else { phase = "RED"; color = "var(--red)"; }
 
-        // 2. Simulation Physics
-        if (truckDistance > 5) truckDistance -= truckSpeed * 0.1;
-        else truckDistance = 1000;
-
-        // 3. Predictive Calculation
-        let rawTarget = predictBestConstantSpeed(truckDistance, elapsed, roadSpeedLimit);
-
-        // 4. INERTIA FILTER (The smoothing logic)
-        if (currentTargetKmh === 0) currentTargetKmh = truckSpeed * 3.6;
-        
-        let diff = rawTarget - currentTargetKmh;
-        if (Math.abs(diff) > MAX_ACCEL_STEP) {
-            currentTargetKmh += MAX_ACCEL_STEP * Math.sign(diff);
+        // 2. Movement Simulation
+        if (truckDist > 5) {
+            // In simulation, we slowly try to match the target to show the color logic
+            truckKmh += (smoothedTargetKmh - truckKmh) * 0.02; 
+            truckDist -= (truckKmh / 3.6) * 0.1;
         } else {
-            currentTargetKmh = rawTarget;
+            truckDist = 1000;
+            truckKmh = 75;
         }
 
-        // 5. UPDATE UI
-        document.getElementById('ui-target-speed').innerText = Math.round(currentTargetKmh);
-        document.getElementById('ui-target-speed').style.color = currentTargetKmh > roadSpeedLimit ? 'var(--accent-red)' : 'var(--accent-green)';
+        // 3. Predictive Brain + Inertia Filter
+        let rawTarget = predictSectorSpeed(truckDist, elapsed, roadLimit);
+        if (smoothedTargetKmh === 0) smoothedTargetKmh = truckKmh;
         
-        document.getElementById('ui-distance').innerText = Math.round(truckDistance) + " m";
-        document.getElementById('ui-limit').innerText = roadSpeedLimit + " km/h";
+        let diff = rawTarget - smoothedTargetKmh;
+        if (Math.abs(diff) > INERTIA_STEP) smoothedTargetKmh += INERTIA_STEP * Math.sign(diff);
+        else smoothedTargetKmh = rawTarget;
+
+        // 4. Tolerance Feedback Logic
+        const error = Math.abs(truckKmh - smoothedTargetKmh);
+        let feedbackColor = "var(--green)";
+        let feedbackText = "ON TRACK";
+
+        if (error > 10) { feedbackColor = "var(--red)"; feedbackText = "ADJUST SPEED!"; }
+        else if (error > 3) { feedbackColor = "var(--yellow)"; feedbackText = "ALIGNING..."; }
+
+        // 5. Update UI
+        const uiTarget = document.getElementById('ui-target-speed');
+        const uiCard = document.getElementById('ui-card');
+        
+        uiTarget.innerText = Math.round(smoothedTargetKmh);
+        uiTarget.style.color = feedbackColor;
+        uiCard.style.borderColor = feedbackColor;
+        
+        document.getElementById('ui-feedback').innerText = feedbackText;
+        document.getElementById('ui-feedback').style.color = feedbackColor;
+        document.getElementById('ui-distance').innerText = Math.round(truckDist) + " m";
+        document.getElementById('ui-limit').innerText = roadLimit + " km/h";
+        document.getElementById('ui-mode-text').innerText = truckDist > SECTOR_THRESHOLD ? "CRUISE PHASE" : "PRECISION PHASE";
         
         document.getElementById('phase-dot').style.backgroundColor = color;
         document.getElementById('phase-text').innerText = phase;
         document.getElementById('phase-text').style.color = color;
 
-        // Gauges
-        const currentKmh = truckSpeed * 3.6;
-        document.getElementById('current-speed-bar').style.width = (currentKmh / 100 * 100) + "%";
-        document.getElementById('target-marker').style.left = (currentTargetKmh / 100 * 100) + "%";
+        // Gauge Bars
+        document.getElementById('current-speed-bar').style.width = (truckKmh / 100 * 100) + "%";
+        document.getElementById('target-marker').style.left = (smoothedTargetKmh / 100 * 100) + "%";
     }
 
     setInterval(updateApp, 100);
