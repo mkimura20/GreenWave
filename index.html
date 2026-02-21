@@ -117,14 +117,20 @@
 </div>
 
 <script>
+    // Configuration
     const LIGHT_MODES = {
         STRAIGHT: { green: 25, yellow: 4, red: 20 },
         TURN: { green: 12, yellow: 3, red: 35 }
     };
     const SPEED_BUFFER = 2.5; 
     const INERTIA_STEP = 0.4;
-    const SECTOR_THRESHOLD = 400;
+    
+    // NEW CRITICAL SETTING: 
+    // Below this distance, we calculate for the light. 
+    // Above this, we maintain road speed.
+    const DECISION_ZONE = 500; 
 
+    // State
     let isSimMode = false;
     let isAutoRouteEnabled = false;
     let currentRoute = 'STRAIGHT';
@@ -156,9 +162,14 @@
     function resyncCycle() { cycleStart = Date.now() / 1000; }
 
     function predictSectorSpeed(dist, elapsed, limit) {
+        // CORRECTION: If far away, don't worry about the light yet. 
+        // Maintain the road limit to avoid premature slowing.
+        if (dist > DECISION_ZONE) {
+            return limit; 
+        }
+
         const cfg = LIGHT_MODES[currentRoute];
         const total = cfg.green + cfg.yellow + cfg.red;
-        const isFar = dist > SECTOR_THRESHOLD;
         let candidates = [];
 
         for (let i = 0; i < 3; i++) {
@@ -174,14 +185,15 @@
             let maxS = (dist / (toGreen > 0 ? toGreen : 0.1)) * 3.6;
 
             if (minS <= limit && maxS >= 20) {
-                let ideal = isFar ? Math.min(limit, maxS * 0.98) : Math.min(limit, (minS + maxS) / 2);
+                // Focus on the most comfortable speed in the window
+                let ideal = Math.min(limit, (minS + maxS) / 2);
                 candidates.push(ideal);
             }
         }
 
         if (candidates.length > 0) {
-            if (isFar) candidates.sort((a,b) => b - a);
-            else candidates.sort((a,b) => Math.abs(a - truckKmh) - Math.abs(b - truckKmh));
+            // Pick speed closest to current to preserve momentum
+            candidates.sort((a,b) => Math.abs(a - truckKmh) - Math.abs(b - truckKmh));
             return candidates[0];
         }
         return limit; 
@@ -190,7 +202,6 @@
     function updateApp() {
         if (!isSimMode) return;
 
-        // Auto-Route Simulation Logic
         if (isAutoRouteEnabled) {
             if (truckDist < 300 && currentRoute !== 'TURN') setRoute('TURN');
             else if (truckDist > 800 && currentRoute !== 'STRAIGHT') setRoute('STRAIGHT');
@@ -227,7 +238,7 @@
         document.getElementById('ui-card').style.borderColor = feedbackColor;
         document.getElementById('ui-distance').innerText = Math.round(truckDist) + " m";
         document.getElementById('ui-limit').innerText = roadLimit + " km/h";
-        document.getElementById('ui-mode-text').innerText = truckDist > SECTOR_THRESHOLD ? "CRUISE PHASE" : "PRECISION PHASE";
+        document.getElementById('ui-mode-text').innerText = truckDist > DECISION_ZONE ? "CRUISE PHASE" : "ADAPTIVE PHASE";
         
         document.getElementById('phase-dot').style.backgroundColor = color;
         document.getElementById('phase-text').innerText = phase;
