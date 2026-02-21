@@ -3,221 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Onda Verde AI - Pro Version</title>
-    
+    <title>Onda Verde AI - Sincronia Absoluta</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <style>
-        :root { --primary: #28a745; --danger: #dc3545; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
+        :root { --primary: #28a745; --warning: #ffc107; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; }
         .container { width: 100%; max-width: 450px; }
         .card { background: var(--card); padding: 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
-        
         .vel-alvo { font-size: 5rem; font-weight: 900; color: var(--primary); margin: 0; }
-        .dist-info { font-size: 1.1rem; color: #007bff; font-weight: bold; margin-bottom: 5px; }
+        #map { height: 180px; width: 100%; border-radius: 15px; margin: 15px 0; border: 1px solid #333; }
         
-        #map { height: 220px; width: 100%; border-radius: 15px; margin: 15px 0; border: 1px solid #333; z-index: 1; }
+        .inputs-ciclo { display: flex; gap: 10px; justify-content: center; margin: 10px 0; }
+        .inputs-ciclo div { display: flex; flex-direction: column; align-items: center; }
+        .btn-chrono { font-size: 0.7rem; padding: 5px; margin-top: 5px; background: #444; color: white; border-radius: 5px; cursor: pointer; border: none; }
+        
+        /* Ajuste Fino */
+        .ajuste-fino { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
+        .btn-fino { background: #333; color: white; padding: 10px; border-radius: 8px; font-size: 0.9rem; width: 60px; }
 
-        select, input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #444; background: #2a2a2a; color: white; font-size: 1rem; }
-        button { width: 100%; padding: 15px; margin: 5px 0; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; }
-        
-        .btn-green { background: var(--primary); color: white; height: 70px; font-size: 1.2rem; }
-        .btn-save { background: #444; color: white; }
-        .btn-delete { background: var(--danger); color: white; font-size: 0.8rem; padding: 10px; margin-bottom: 10px; }
-        .btn-reset { background: #ffc107; color: #000; }
-        
-        .status { color: #aaa; font-size: 0.8rem; margin-top: 10px; min-height: 20px; background: rgba(0,0,0,0.2); border-radius: 5px; padding: 5px; }
+        input, select { padding: 10px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: white; text-align: center; font-size: 1rem; }
+        button { width: 100%; padding: 15px; margin: 5px 0; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-green { background: var(--primary); color: white; height: 60px; }
+        .btn-sync { background: var(--warning); color: #000; }
+        .status { color: #aaa; font-size: 0.8rem; margin-top: 10px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="card">
-        <h2 style="margin: 0 0 10px 0;">Onda Verde AI</h2>
-        
-        <div id="distancia-display" class="dist-info">Aguardando GPS...</div>
+        <h2 style="margin: 0;">Onda Verde AI</h2>
+        <div id="distancia-display" style="font-weight: bold; color: #007bff;">-- m</div>
         <div class="vel-alvo" id="vel-alvo">0</div>
-        <div style="color: #888; font-size: 0.8rem; margin-bottom: 5px;">KM/H RECOMENDADOS</div>
+        <div id="fase-label" style="font-weight: bold; color: #888;">MODO MEMÓRIA ATIVO</div>
 
         <div id="map"></div>
 
-        <select id="lista-farois" onchange="selecionarFarol(this.value)">
-            <option value="">Localizando pontos próximos...</option>
+        <select id="lista-farois" onchange="selecionarFarol(this.value)" style="width: 100%;">
+            <option value="">Carregar faróis...</option>
         </select>
-        
-        <button class="btn-save" onclick="salvarFarol()">+ SALVAR LOCAL ATUAL</button>
-        <button class="btn-delete" onclick="eliminarFarol()">LIMPAR PONTO SELECIONADO</button>
-        
-        <hr style="border: 0.5px solid #333; margin: 15px 0;">
 
-        <div style="display: flex; gap: 10px; align-items: center; justify-content: center; margin-bottom: 10px;">
-            <label>Ciclo (s):</label>
-            <input type="number" id="tempo-ciclo" value="30" style="width: 80px;">
+        <div class="inputs-ciclo">
+            <div> Verde (s) <input type="number" id="t-verde" value="30"> <button class="btn-chrono" onclick="toggleChrono('V')">⏱️ MEDIR</button> </div>
+            <div> Vermelho (s) <input type="number" id="t-vermelho" value="30"> <button class="btn-chrono" onclick="toggleChrono('R')">⏱️ MEDIR</button> </div>
+        </div>
+
+        <div class="ajuste-fino">
+            <button class="btn-fino" onclick="ajusteFino(-1000)">-1s</button>
+            <span style="align-self: center; font-size: 0.8rem;">Ajuste Fino</span>
+            <button class="btn-fino" onclick="ajusteFino(1000)">+1s</button>
         </div>
         
-        <button class="btn-green" onclick="iniciarOnda()">PARTIR AGORA!</button>
-        <button class="btn-reset" onclick="resetarCiclo()">REINICIAR TEMPO</button>
+        <button class="btn-green" onclick="iniciarOnda()">PARTIR AGORA</button>
+        <button class="btn-sync" onclick="sincronizarAgora()">SINCRONIZAR VERDE (O Relógio guardará)</button>
         
-        <div class="status" id="status">Selecione um ponto e clique em Partir.</div>
+        <div class="status" id="status">Sincronize uma vez para guardar no mapa.</div>
     </div>
 </div>
 
 <script>
     let listaFarois = JSON.parse(localStorage.getItem('meusFarois')) || [];
-    let destino = null;
-    let watchId = null;
-    let horaFinalEsperada = 0;
-    let ultimaVoz = 0;
-    let mapa, marcadorUser, marcadorFarol;
+    let destino = null, watchId = null, mapa, marcadorUser, marcadorFarol;
+    let ultimaVoz = 0, chronoStart = 0, chronoTipo = null;
     const noSleep = new NoSleep();
 
-    // Iniciar GPS para o mapa e organização
     navigator.geolocation.getCurrentPosition(pos => {
-        atualizarMapa(pos.coords.latitude, pos.coords.longitude);
+        const lat = pos.coords.latitude, lon = pos.coords.longitude;
+        mapa = L.map('map').setView([lat, lon], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
+        marcadorUser = L.marker([lat, lon]).addTo(mapa);
         organizarListaPorProximidade();
-    }, err => {
-        document.getElementById('status').innerText = "Erro GPS: " + err.message;
-    }, { enableHighAccuracy: true });
-
-    // Atualiza a cada 10s para manter a lista ordenada conforme você se move
-    setInterval(organizarListaPorProximidade, 10000);
+    }, null, { enableHighAccuracy: true });
 
     function falar(texto) {
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // Para falas anteriores
-            const utterance = new SpeechSynthesisUtterance(texto);
-            utterance.lang = 'pt-BR';
-            window.speechSynthesis.speak(utterance);
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(texto);
+            u.lang = 'pt-BR';
+            window.speechSynthesis.speak(u);
         }
     }
 
-    function atualizarMapa(lat, lon) {
-        if (!mapa) {
-            mapa = L.map('map').setView([lat, lon], 16);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
-            marcadorUser = L.marker([lat, lon]).addTo(mapa).bindPopup("Você");
+    function toggleChrono(tipo) {
+        const btn = tipo === 'V' ? event.target : event.target;
+        const input = tipo === 'V' ? document.getElementById('t-verde') : document.getElementById('t-vermelho');
+        if (chronoTipo === null) {
+            chronoStart = Date.now();
+            chronoTipo = tipo;
+            btn.innerText = "PARAR ⏹️";
         } else {
-            marcadorUser.setLatLng([lat, lon]);
-            if (!destino) mapa.panTo([lat, lon]);
+            let diff = Math.round((Date.now() - chronoStart) / 1000);
+            input.value = diff;
+            btn.innerText = "⏱️ MEDIR";
+            chronoTipo = null;
+            salvarDados();
         }
-    }
-
-    function salvarFarol() {
-        navigator.geolocation.getCurrentPosition(pos => {
-            const nome = prompt("Nome do ponto:");
-            if (!nome) return;
-            listaFarois.push({ nome, lat: pos.coords.latitude, lon: pos.coords.longitude });
-            localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
-            organizarListaPorProximidade();
-            document.getElementById('status').innerText = "Ponto salvo!";
-        }, null, { enableHighAccuracy: true });
-    }
-
-    function eliminarFarol() {
-        const select = document.getElementById('lista-farois');
-        const index = select.value;
-        if (index === "" || !confirm("Deseja apagar este ponto permanentemente?")) return;
-        
-        listaFarois.splice(index, 1);
-        localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
-        destino = null;
-        if (marcadorFarol) mapa.removeLayer(marcadorFarol);
-        organizarListaPorProximidade();
-        document.getElementById('status').innerText = "Ponto removido.";
-    }
-
-    function organizarListaPorProximidade() {
-        navigator.geolocation.getCurrentPosition(pos => {
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
-            listaFarois.forEach(f => {
-                f.distTemp = calcularDistancia(lat, lon, f.lat, f.lon);
-            });
-            listaFarois.sort((a, b) => a.distTemp - b.distTemp);
-            atualizarSelect();
-            atualizarMapa(lat, lon);
-        }, null, { enableHighAccuracy: true });
-    }
-
-    function atualizarSelect() {
-        const select = document.getElementById('lista-farois');
-        select.innerHTML = '<option value="">Selecione um Ponto</option>';
-        listaFarois.forEach((f, i) => { 
-            const dist = f.distTemp ? `(${(f.distTemp/1000).toFixed(2)}km)` : "";
-            select.innerHTML += `<option value="${i}">${f.nome} ${dist}</option>`; 
-        });
     }
 
     function selecionarFarol(i) {
         destino = listaFarois[i] || null;
         if (destino) {
+            document.getElementById('t-verde').value = destino.tVerde || 30;
+            document.getElementById('t-vermelho').value = destino.tVermelho || 30;
             if (marcadorFarol) mapa.removeLayer(marcadorFarol);
-            marcadorFarol = L.circle([destino.lat, destino.lon], { color: 'red', radius: 20 }).addTo(mapa);
+            marcadorFarol = L.circle([destino.lat, destino.lon], { color: 'red', radius: 25 }).addTo(mapa);
             mapa.panTo([destino.lat, destino.lon]);
+            document.getElementById('status').innerText = "Farol: " + destino.nome + " (Sincronia Automática)";
         }
     }
 
-    function resetarCiclo() {
-        const segundos = parseInt(document.getElementById('tempo-ciclo').value);
-        horaFinalEsperada = Date.now() + (segundos * 1000);
-        falar("Reiniciado");
+    function sincronizarAgora() {
+        if (!destino) return alert("Selecione um farol primeiro!");
+        destino.refSync = Date.now(); // Guarda o milissegundo exato da abertura
+        salvarDados();
+        falar("Sincronia absoluta guardada.");
+    }
+
+    function ajusteFino(ms) {
+        if (destino && destino.refSync) {
+            destino.refSync += ms;
+            salvarDados();
+            document.getElementById('status').innerText = "Ajuste de 1s aplicado.";
+        }
+    }
+
+    function salvarDados() {
+        const select = document.getElementById('lista-farois');
+        const index = select.value;
+        if (index !== "" && destino) {
+            destino.tVerde = document.getElementById('t-verde').value;
+            destino.tVermelho = document.getElementById('t-vermelho').value;
+            listaFarois[index] = destino;
+            localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
+        }
+    }
+
+    function organizarListaPorProximidade() {
+        navigator.geolocation.getCurrentPosition(pos => {
+            const lat = pos.coords.latitude, lon = pos.coords.longitude;
+            listaFarois.forEach(f => f.distTemp = calcularDistancia(lat, lon, f.lat, f.lon));
+            listaFarois.sort((a, b) => a.distTemp - b.distTemp);
+            const select = document.getElementById('lista-farois');
+            select.innerHTML = '<option value="">Selecione um Ponto</option>';
+            listaFarois.forEach((f, i) => select.innerHTML += `<option value="${i}">${f.nome} (${(f.distTemp/1000).toFixed(2)}km)</option>`);
+            marcadorUser.setLatLng([lat, lon]);
+        }, null, { enableHighAccuracy: true });
     }
 
     function iniciarOnda() {
-        if (!destino) return alert("Selecione um ponto primeiro!");
+        if (!destino) return alert("Selecione um ponto!");
         noSleep.enable();
-        
-        const segundos = parseInt(document.getElementById('tempo-ciclo').value);
-        horaFinalEsperada = Date.now() + (segundos * 1000);
-
         if (watchId) navigator.geolocation.clearWatch(watchId);
 
         watchId = navigator.geolocation.watchPosition(pos => {
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
-            atualizarMapa(lat, lon);
-            
+            const lat = pos.coords.latitude, lon = pos.coords.longitude;
+            marcadorUser.setLatLng([lat, lon]);
             const d = calcularDistancia(lat, lon, destino.lat, destino.lon);
-            document.getElementById('distancia-display').innerText = `Distância: ${Math.round(d)} m`;
+            document.getElementById('distancia-display').innerText = `${Math.round(d)} m`;
 
-            let tempoRestante = Math.max(0, (horaFinalEsperada - Date.now()) / 1000);
+            const tVerde = parseInt(document.getElementById('t-verde').value) * 1000;
+            const tVermelho = parseInt(document.getElementById('t-vermelho').value) * 1000;
+            const cicloTotal = tVerde + tVermelho;
+            
+            // LÓGICA DE TEMPO ABSOLUTO
+            // Se não houver sincronia prévia, usa o momento em que clicou em iniciar
+            const ref = destino.refSync || Date.now();
+            let tempoDesdeSincronia = (Date.now() - ref) % cicloTotal;
+            
+            // Correção para valores negativos se o relógio oscilar
+            if (tempoDesdeSincronia < 0) tempoDesdeSincronia += cicloTotal;
 
-            if (tempoRestante > 0 && d > 10) {
-                let vKmh = ((d / tempoRestante) * 3.6).toFixed(1);
-                document.getElementById('vel-alvo').innerText = vKmh > 120 ? "---" : vKmh;
-                document.getElementById('status').innerText = `Tempo: ${Math.round(tempoRestante)}s | GPS Ativo`;
+            let tempoAlvo, modo;
+            if (tempoDesdeSincronia < tVerde) {
+                tempoAlvo = (tVerde - tempoDesdeSincronia) / 1000;
+                modo = "VERDE";
+            } else {
+                tempoAlvo = (cicloTotal - tempoDesdeSincronia) / 1000;
+                modo = "VERMELHO";
+            }
 
-                if (Date.now() - ultimaVoz > 12000 && vKmh <= 120) {
+            const velDisplay = document.getElementById('vel-alvo');
+            const faseLabel = document.getElementById('fase-label');
+            
+            if (d > 10) {
+                let vKmh = ((d / tempoAlvo) * 3.6).toFixed(1);
+                velDisplay.innerText = vKmh > 125 ? "---" : vKmh;
+                velDisplay.style.color = (modo === "VERDE") ? "#28a745" : "#ffc107";
+                faseLabel.innerText = "FASE: " + modo + " (" + Math.round(tempoAlvo) + "s)";
+                
+                if (Date.now() - ultimaVoz > 12000 && vKmh <= 125) {
                     falar(`Velocidade ${Math.round(vKmh)}`);
                     ultimaVoz = Date.now();
                 }
-            } else if (d <= 10) {
-                document.getElementById('vel-alvo').innerText = "OK";
-                falar("Chegou!");
-                pararTudo();
             } else {
-                document.getElementById('vel-alvo').innerText = "---";
-                document.getElementById('status').innerText = "Tempo esgotado!";
+                velDisplay.innerText = "OK";
+                falar("Ponto alcançado");
+                navigator.geolocation.clearWatch(watchId);
             }
-        }, err => {
-            document.getElementById('status').innerText = "Erro GPS: " + err.message;
-        }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
-    }
-
-    function pararTudo() {
-        if (watchId) navigator.geolocation.clearWatch(watchId);
-        noSleep.disable();
+        }, null, { enableHighAccuracy: true });
     }
 
     function calcularDistancia(lat1, lon1, lat2, lon2) {
         const R = 6371000;
-        const dLat = (lat2-lat1) * Math.PI/180;
-        const dLon = (lon2-lon1) * Math.PI/180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const dLat = (lat2-lat1) * Math.PI/180, dLon = (lon2-lon1) * Math.PI/180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
         return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
     }
 </script>
