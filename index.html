@@ -3,298 +3,258 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Onda Verde AI - Edição Brasil</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <title>Onda Verde AI - ETS2 Edition</title>
     <style>
-        :root { --primary: #28a745; --warning: #ffc107; --danger: #dc3545; --bg: #121212; --card: #1e1e1e; --text: #ffffff; --blue: #007bff; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; }
-        .container { width: 100%; max-width: 450px; }
-        .card { background: var(--card); padding: 15px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
-        
-        .vel-alvo { font-size: 5.5rem; font-weight: 900; color: var(--primary); margin: 5px 0; line-height: 1; }
-        .progress-container { width: 100%; height: 14px; background: #333; border-radius: 7px; margin: 15px 0; overflow: hidden; border: 1px solid #444; }
-        .progress-bar { height: 100%; width: 0%; transition: width 0.3s linear; }
+        :root {
+            --bg-color: #0a0a0a;
+            --card-bg: #161616;
+            --accent-green: #00ff41;
+            --accent-blue: #00d4ff;
+            --accent-red: #ff3e3e;
+            --text-main: #eeeeee;
+        }
 
-        #map { height: 160px; width: 100%; border-radius: 15px; margin: 12px 0; border: 1px solid #333; }
-        
-        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 10px 0; }
-        .grid-inputs div { display: flex; flex-direction: column; font-size: 0.7rem; color: #888; }
-        
-        .flex-buttons { display: flex; gap: 8px; margin-bottom: 8px; }
-        input, select { padding: 10px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: white; text-align: center; font-size: 1rem; width: 100%; box-sizing: border-box; }
-        
-        button { width: 100%; padding: 14px; margin: 4px 0; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
-        .btn-master { background: var(--primary); color: white; font-size: 1.1rem; height: 60px; }
-        .btn-sync { background: var(--warning); color: #000; flex: 2; }
-        .btn-fino { background: #333; color: white; flex: 1; }
-        .btn-save { background: var(--blue); color: white; }
-        
-        .backup-zone { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; border-top: 1px solid #333; padding-top: 15px; }
-        .btn-backup { background: #444; color: #ccc; font-size: 0.7rem; padding: 10px; }
-        .btn-delete { background: transparent; color: var(--danger); font-size: 0.7rem; border: 1px solid var(--danger); grid-column: span 2; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
 
-        .auto-status { font-size: 0.75rem; color: var(--primary); font-weight: bold; margin-bottom: 5px; }
+        #dashboard {
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .status-badge {
+            background: #333;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 20px;
+            display: inline-block;
+            border: 1px solid #444;
+        }
+
+        .main-card {
+            background: var(--card-bg);
+            border-radius: 30px;
+            padding: 30px;
+            border: 1px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .label {
+            color: #888;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 2px;
+        }
+
+        .target-speed {
+            font-size: 82px;
+            font-weight: 800;
+            color: var(--accent-green);
+            margin: 10px 0;
+            text-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        }
+
+        .unit { font-size: 24px; color: #555; }
+
+        .progress-track {
+            width: 100%;
+            height: 12px;
+            background: #222;
+            border-radius: 6px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background: var(--accent-green);
+            transition: width 0.1s linear, background-color 0.3s;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .info-item {
+            background: #222;
+            padding: 10px;
+            border-radius: 15px;
+        }
+
+        .info-value { font-weight: bold; font-size: 18px; display: block; }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            background: #252525;
+            border: 1px solid #444;
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:active { background: #333; }
+
+        .sim-active { border-color: var(--accent-blue) !important; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="card">
-        <div id="auto-msg" class="auto-status">● GPS PRONTO</div>
-        <div id="dist-label" style="font-weight: bold; color: var(--blue);">LOCALIZANDO FARÓIS...</div>
-        
-        <div class="vel-alvo" id="vel-alvo">0</div>
-        
-        <div class="progress-container">
-            <div id="barra-ciclo" class="progress-bar"></div>
+    <div id="dashboard">
+        <div id="mode-status" class="status-badge">MODO REAL: AGUARDANDO SDK</div>
+
+        <div class="main-card" id="card-container">
+            <span class="label">Velocidade Alvo</span>
+            <div class="target-speed">
+                <span id="v-alvo">--</span>
+                <span class="unit">km/h</span>
+            </div>
+
+            <div class="progress-track">
+                <div id="progress-bar"></div>
+            </div>
+
+            <div id="light-state-label" class="label">SINCRONIZANDO...</div>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="label">Distância</span>
+                    <span id="dist-val" class="info-value">-- m</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Sua Vel.</span>
+                    <span id="curr-speed" class="info-value">-- km/h</span>
+                </div>
+            </div>
         </div>
 
-        <div id="fase-label" style="font-weight: bold; color: #888; font-size: 0.8rem;">AGUARDANDO INÍCIO</div>
-
-        <div id="map"></div>
-
-        <select id="lista-farois" onchange="selecionarFarolManual(this.value)">
-            <option value="">Selecione um ponto...</option>
-        </select>
-
-        <div class="grid-inputs">
-            <div>Verde (s)<input type="number" id="t-verde" value="30"></div>
-            <div>Verm (s)<input type="number" id="t-vermelho" value="30"></div>
-            <div>Buffer (s)<input type="number" id="t-buffer" value="2"></div>
+        <div class="controls">
+            <button id="btn-sim" onclick="toggleSimulation()">ATIVAR MODO SIMULAÇÃO</button>
+            <button onclick="resync()">SINAL ABRIU AGORA (SYNC)</button>
         </div>
-
-        <div class="flex-buttons">
-            <button class="btn-fino" onclick="ajusteFino(-1000)">-1s</button>
-            <button class="btn-sync" onclick="sincronizarAgora()">SINCRONIZAR VERDE</button>
-            <button class="btn-fino" onclick="ajusteFino(1000)">+1s</button>
-        </div>
-        
-        <button class="btn-master" id="btn-master" onclick="toggleMonitoramento()">ATIVAR MONITORAMENTO</button>
-        <button class="btn-save" onclick="salvarFarol()">+ SALVAR LOCAL ATUAL</button>
-        
-        <div class="backup-zone">
-            <button class="btn-backup" onclick="exportarBackup()">📤 EXPORTAR BACKUP</button>
-            <button class="btn-backup" onclick="document.getElementById('input-file').click()">📥 IMPORTAR BACKUP</button>
-            <input type="file" id="input-file" style="display:none" onchange="importarBackup(event)">
-            <button class="btn-delete" onclick="eliminarFarol()">APAGAR FAROL SELECIONADO</button>
-        </div>
-
-        <div id="status" style="font-size: 0.7rem; color: #666; margin-top: 10px;">Raio de busca: 800m</div>
     </div>
-</div>
 
-<script>
-    let listaFarois = JSON.parse(localStorage.getItem('meusFarois')) || [];
-    let destino = null, watchId = null, mapa, marcadorUser, marcadorFarol;
-    let ultimaVoz = 0, monitorando = false;
-    const noSleep = new NoSleep();
-
-    // Inicialização do Mapa
-    navigator.geolocation.getCurrentPosition(pos => {
-        const lat = pos.coords.latitude, lon = pos.coords.longitude;
-        mapa = L.map('map').setView([lat, lon], 16);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
-        marcadorUser = L.marker([lat, lon]).addTo(mapa);
-        atualizarSelect();
-    }, null, { enableHighAccuracy: true });
-
-    function falar(texto) {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(texto);
-            u.lang = 'pt-BR';
-            window.speechSynthesis.speak(u);
-        }
-    }
-
-    function atualizarSelect() {
-        const select = document.getElementById('lista-farois');
-        select.innerHTML = '<option value="">Lista de Faróis Salvos</option>';
-        listaFarois.forEach((f, i) => {
-            select.innerHTML += `<option value="${i}">${f.nome}</option>`;
-        });
-    }
-
-    function salvarFarol() {
-        navigator.geolocation.getCurrentPosition(pos => {
-            const nome = prompt("Nome do Farol:");
-            if (!nome) return;
-            const novo = { 
-                nome, 
-                lat: pos.coords.latitude, 
-                lon: pos.coords.longitude,
-                tVerde: document.getElementById('t-verde').value,
-                tVermelho: document.getElementById('t-vermelho').value,
-                refSync: Date.now()
-            };
-            listaFarois.push(novo);
-            localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
-            atualizarSelect();
-            falar("Farol salvo com sucesso.");
-        }, null, { enableHighAccuracy: true });
-    }
-
-    function exportarBackup() {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(listaFarois));
-        const downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", "backup_farois.json");
-        document.body.appendChild(downloadAnchorNode);
-        downloadAnchorNode.click();
-        downloadAnchorNode.remove();
-    }
-
-    function importarBackup(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const importados = JSON.parse(e.target.result);
-                listaFarois = importados;
-                localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
-                atualizarSelect();
-                alert("Backup importado com sucesso!");
-            } catch (err) {
-                alert("Erro ao ler o arquivo de backup.");
-            }
+    <script>
+        // --- CONFIGURAÇÕES E ESTADO ---
+        let isSimulating = false;
+        let simDistance = 500;
+        let simSpeed = 13.8; // m/s (~50km/h)
+        
+        // Farol de teste (Mock)
+        let activeLight = {
+            id: "sim_01",
+            coords: { x: 0, z: 0 },
+            cycle: { green: 20, red: 20 },
+            lastGreenStart: Date.now() / 1000,
+            buffer: 2.0
         };
-        reader.readAsText(file);
-    }
 
-    function selecionarFarolManual(i) {
-        if (i === "") return;
-        destino = listaFarois[i];
-        carregarDadosDestino();
-    }
+        // --- MOTOR DE SIMULAÇÃO ---
+        function toggleSimulation() {
+            isSimulating = !isSimulating;
+            const btn = document.getElementById('btn-sim');
+            const status = document.getElementById('mode-status');
+            const card = document.getElementById('card-container');
 
-    function carregarDadosDestino() {
-        if (!destino) return;
-        document.getElementById('t-verde').value = destino.tVerde || 30;
-        document.getElementById('t-vermelho').value = destino.tVermelho || 30;
-        if (marcadorFarol) mapa.removeLayer(marcadorFarol);
-        marcadorFarol = L.circle([destino.lat, destino.lon], { color: 'red', radius: 25 }).addTo(mapa);
-        mapa.panTo([destino.lat, destino.lon]);
-        document.getElementById('auto-msg').innerText = `● ALVO: ${destino.nome.toUpperCase()}`;
-    }
-
-    function sincronizarAgora() {
-        if (!destino) return alert("Selecione um farol primeiro!");
-        destino.refSync = Date.now();
-        salvarNoStorage();
-        falar("Sincronizado");
-    }
-
-    function ajusteFino(ms) {
-        if (destino && destino.refSync) {
-            destino.refSync += ms;
-            salvarNoStorage();
+            if (isSimulating) {
+                btn.innerText = "PARAR SIMULAÇÃO";
+                btn.style.background = "#004466";
+                status.innerText = "MODO SIMULAÇÃO ATIVO";
+                card.classList.add('sim-active');
+            } else {
+                btn.innerText = "ATIVAR MODO SIMULAÇÃO";
+                btn.style.background = "#252525";
+                status.innerText = "MODO REAL: AGUARDANDO SDK";
+                card.classList.remove('sim-active');
+                resetData();
+            }
         }
-    }
 
-    function salvarNoStorage() {
-        localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
-    }
-
-    function eliminarFarol() {
-        const i = document.getElementById('lista-farois').value;
-        if (i === "" || !confirm("Deseja apagar este farol?")) return;
-        listaFarois.splice(i, 1);
-        localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
-        destino = null;
-        atualizarSelect();
-    }
-
-    function toggleMonitoramento() {
-        if (monitorando) {
-            navigator.geolocation.clearWatch(watchId);
-            monitorando = false;
-            document.getElementById('btn-master').innerText = "ATIVAR MONITORAMENTO";
-            document.getElementById('btn-master').style.background = "var(--primary)";
-            noSleep.disable();
-        } else {
-            monitorando = true;
-            document.getElementById('btn-master').innerText = "PARAR MONITORAMENTO";
-            document.getElementById('btn-master').style.background = "var(--danger)";
-            noSleep.enable();
-            iniciarGPS();
+        function resetData() {
+            simDistance = 500;
+            document.getElementById('v-alvo').innerText = "--";
+            document.getElementById('dist-val').innerText = "-- m";
+            document.getElementById('curr-speed').innerText = "-- km/h";
+            document.getElementById('progress-bar').style.width = "0%";
         }
-    }
 
-    function iniciarGPS() {
-        watchId = navigator.geolocation.watchPosition(pos => {
-            const lat = pos.coords.latitude, lon = pos.coords.longitude;
-            marcadorUser.setLatLng([lat, lon]);
+        function resync() {
+            activeLight.lastGreenStart = Date.now() / 1000;
+            console.log("Sincronizado!");
+        }
 
-            if (!destino || calcularDistancia(lat, lon, destino.lat, destino.lon) > 800) {
-                let candidatos = listaFarois.map(f => ({...f, d: calcularDistancia(lat, lon, f.lat, f.lon)}))
-                                         .filter(c => c.d < 800)
-                                         .sort((a,b) => a.d - b.d);
-                if (candidatos.length > 0) {
-                    destino = candidatos[0];
-                    carregarDadosDestino();
-                    falar("Aproximando de " + destino.nome);
-                }
+        // --- LÓGICA DE CÁLCULO (O CORAÇÃO DO APP) ---
+        function update() {
+            if (!isSimulating) return;
+
+            // 1. Simular movimento do caminhão
+            if (simDistance > 5) {
+                simDistance -= simSpeed * 0.1; 
+            } else {
+                simDistance = 800; // Loop da simulação
             }
 
-            if (destino) {
-                const d = calcularDistancia(lat, lon, destino.lat, destino.lon);
-                document.getElementById('dist-label').innerText = `${Math.round(d)} METROS`;
-                
-                if (d < 15) {
-                    falar("Farol ultrapassado.");
-                    destino = null;
-                    return;
-                }
+            // 2. Cálculo do Ciclo do Semáforo
+            const currentTime = Date.now() / 1000;
+            const cycleTotal = activeLight.cycle.green + activeLight.cycle.red;
+            const elapsed = (currentTime - activeLight.lastGreenStart) % cycleTotal;
+            
+            let timeToArrival = 0;
+            let isGreen = elapsed < activeLight.cycle.green;
+            const progressBar = document.getElementById('progress-bar');
+            const stateLabel = document.getElementById('light-state-label');
 
-                const tV = parseInt(document.getElementById('t-verde').value) * 1000;
-                const tR = parseInt(document.getElementById('t-vermelho').value) * 1000;
-                const tB = parseInt(document.getElementById('t-buffer').value) * 1000;
-                const total = tV + tR;
-                
-                let rel = (Date.now() - (destino.refSync || Date.now())) % total;
-                if (rel < 0) rel += total;
-
-                let tAlvo, modo, pct;
-                const barra = document.getElementById('barra-ciclo');
-
-                if (rel < tV) {
-                    tAlvo = (tV - rel) / 1000;
-                    modo = "VERDE";
-                    pct = (1 - (rel / tV)) * 100;
-                    barra.style.backgroundColor = "var(--primary)";
-                } else {
-                    tAlvo = ((total - rel) + tB) / 1000;
-                    modo = "VERMELHO";
-                    pct = ((rel - tV) / tR) * 100;
-                    barra.style.backgroundColor = "var(--warning)";
-                }
-
-                barra.style.width = pct + "%";
-                const vDisplay = document.getElementById('vel-alvo');
-                let vKmh = ((d / tAlvo) * 3.6).toFixed(1);
-
-                vDisplay.innerText = (vKmh > 115 || vKmh < 5) ? "---" : Math.round(vKmh);
-                vDisplay.style.color = (modo === "VERDE") ? "var(--primary)" : "var(--warning)";
-                document.getElementById('fase-label').innerText = `${modo} • RESTAM ${Math.round(tAlvo)}S`;
-                document.getElementById('fase-label').style.color = vDisplay.style.color;
-
-                if (Date.now() - ultimaVoz > 15000 && vKmh < 115 && vKmh > 10) {
-                    falar(`Velocidade ${Math.round(vKmh)}`);
-                    ultimaVoz = Date.now();
-                }
+            if (isGreen) {
+                // Fase Verde: Tempo restante até fechar - buffer
+                timeToArrival = activeLight.cycle.green - elapsed - activeLight.buffer;
+                stateLabel.innerText = "SINAL VERDE (FECHA EM " + Math.round(timeToArrival) + "s)";
+                progressBar.style.backgroundColor = "var(--accent-green)";
+                progressBar.style.width = ((activeLight.cycle.green - elapsed) / activeLight.cycle.green * 100) + "%";
+            } else {
+                // Fase Vermelha: Tempo restante até abrir + buffer
+                timeToArrival = (cycleTotal - elapsed) + activeLight.buffer;
+                stateLabel.innerText = "SINAL VERMELHO (ABRE EM " + Math.round(timeToArrival - activeLight.buffer) + "s)";
+                progressBar.style.backgroundColor = "var(--accent-red)";
+                progressBar.style.width = ((cycleTotal - elapsed) / activeLight.cycle.red * 100) + "%";
             }
-        }, null, { enableHighAccuracy: true });
-    }
 
-    function calcularDistancia(lat1, lon1, lat2, lon2) {
-        const R = 6371000;
-        const dLat = (lat2-lat1) * Math.PI/180, dLon = (lon2-lon1) * Math.PI/180;
-        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-    }
-</script>
+            // 3. Cálculo da Velocidade Alvo (V = ΔS / Δt)
+            let targetSpeed = (simDistance / timeToArrival) * 3.6;
+
+            // Ajustes de UI
+            if (targetSpeed <= 0 || targetSpeed > 120) targetSpeed = 0;
+            
+            document.getElementById('v-alvo').innerText = Math.round(targetSpeed);
+            document.getElementById('dist-val').innerText = Math.round(simDistance) + " m";
+            document.getElementById('curr-speed').innerText = Math.round(simSpeed * 3.6) + " km/h";
+        }
+
+        // Rodar loop a 10Hz
+        setInterval(update, 100);
+    </script>
 </body>
 </html>
