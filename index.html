@@ -2,87 +2,64 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Onda Verde AI - Ultimate Project</title>
+    <title>Onda Verde AI - Debug Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #050505; --card: #121212; --green: #00ff6a; --yellow: #ffcc00;
             --red: #ff3b3b; --blue: #0088ff; --text: #ffffff;
         }
-
-        body {
-            background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
-            margin: 0; display: flex; align-items: center; justify-content: center;
-            height: 100vh; overflow: hidden;
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        #app-container { width: 95%; max-width: 450px; position: relative; }
+        
+        /* Debug Panel Styling */
+        #debug-panel {
+            background: rgba(0, 0, 0, 0.9); border: 1px solid #444; border-radius: 10px;
+            padding: 10px; font-family: monospace; font-size: 10px; color: #aaa;
+            margin-bottom: 10px; display: none; text-align: left;
         }
+        .debug-stat { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 2px 0; }
+        .debug-online { color: var(--green); }
+        .debug-offline { color: var(--red); }
 
-        #app-container { width: 95%; max-width: 450px; }
-
-        .main-card {
-            background: var(--card); border-radius: 40px; padding: 25px;
-            text-align: center; border: 2px solid #222; transition: border-color 0.4s;
-        }
-
+        .main-card { background: var(--card); border-radius: 40px; padding: 25px; text-align: center; border: 2px solid #222; }
         .header-info { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 11px; font-weight: bold; }
-        #phase-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-
-        .speed-display-container {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0;
-        }
-        .speed-box { padding: 10px; }
+        .speed-display-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
         .speed-val { font-size: 64px; font-weight: 900; line-height: 1; }
         .speed-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 5px; }
-        
         .target-box { color: var(--green); border-right: 1px solid #222; }
         .truck-box { color: var(--blue); }
-
-        .route-selector {
-            display: flex; background: #1a1a1a; border-radius: 15px; padding: 5px; margin: 15px 0;
-        }
-        .route-btn {
-            flex: 1; padding: 10px; border-radius: 10px; border: none; background: transparent;
-            color: #555; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.3s;
-        }
-        .route-btn.active { background: #333; color: white; }
-
         .gauge-area { margin: 20px 0; position: relative; }
         .track { height: 12px; background: #222; border-radius: 6px; position: relative; overflow: hidden; }
-        #current-speed-bar { height: 100%; width: 0%; background: var(--blue); transition: width 0.2s linear; }
-        #target-marker { 
-            position: absolute; top: -4px; width: 6px; height: 20px; 
-            background: white; border-radius: 3px; box-shadow: 0 0 15px white; 
-            transition: left 0.5s cubic-bezier(0.1, 0, 0.3, 1);
-        }
-
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-        .stat-box { background: #1a1a1a; padding: 12px; border-radius: 15px; border: 1px solid #252525; }
-        .stat-val { display: block; font-size: 18px; font-weight: bold; margin-top: 5px; }
-
-        .btn-group { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button.action { padding: 15px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; background: #222; color: white; font-size: 11px; }
-        #btn-sim { border: 1px solid var(--blue); color: var(--blue); }
-        #btn-auto { border: 1px solid #444; color: #777; }
-        #btn-auto.active { border-color: var(--green); color: var(--green); }
+        #current-speed-bar { height: 100%; width: 0%; background: var(--blue); }
+        #target-marker { position: absolute; top: -4px; width: 6px; height: 20px; background: white; border-radius: 3px; box-shadow: 0 0 15px white; transition: left 0.5s ease; }
+        .signal-chain { display: flex; justify-content: center; gap: 15px; margin-top: 15px; }
+        .signal-node { font-size: 10px; padding: 5px 10px; border-radius: 10px; background: #1a1a1a; border: 1px solid #333; }
+        .btn-group { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { padding: 15px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; background: #222; color: white; font-size: 11px; }
+        .active-telemetry { border: 1px solid var(--green) !important; color: var(--green) !important; }
     </style>
 </head>
 <body>
 
 <div id="app-container">
+    <div id="debug-panel">
+        <div class="debug-stat"><span>Status:</span> <span id="db-status" class="debug-offline">OFFLINE</span></div>
+        <div class="debug-stat"><span>Raw Speed:</span> <span id="db-speed">0.00</span></div>
+        <div class="debug-stat"><span>Gear:</span> <span id="db-gear">N</span></div>
+        <div class="debug-stat"><span>Game Connected:</span> <span id="db-game">NO</span></div>
+        <div class="debug-stat"><span>API Endpoint:</span> <span>localhost:25555</span></div>
+    </div>
+
     <div class="main-card" id="ui-card">
         <div class="header-info">
-            <span><span id="phase-dot"></span> <span id="phase-text">ANALYZING</span></span>
-            <span id="ui-mode-text">IDLE</span>
-        </div>
-
-        <div class="route-selector">
-            <button id="btn-straight" class="route-btn active" onclick="setRoute('STRAIGHT')">STRAIGHT</button>
-            <button id="btn-turn" class="route-btn" onclick="setRoute('TURN')">TURN / CURVE</button>
+            <span><span id="phase-dot" style="width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px;background:gray;"></span> <span id="phase-text">SIGNAL A</span></span>
+            <span id="ui-mode-text" onclick="toggleDebug()" style="cursor:pointer">MULTI-WAVE ⚙️</span>
         </div>
 
         <div class="speed-display-container">
             <div class="speed-box target-box">
-                <span class="speed-label">Target</span>
+                <span class="speed-label">Optimal</span>
                 <span class="speed-val" id="ui-target-speed">0</span>
             </div>
             <div class="speed-box truck-box">
@@ -96,159 +73,125 @@
             <div id="target-marker" style="left: 0%;"></div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-box">
-                <span class="speed-label">Distance</span>
-                <span id="ui-distance" class="stat-val">-- m</span>
-            </div>
-            <div class="stat-box">
-                <span class="speed-label">Limit</span>
-                <span id="ui-limit" class="stat-val">-- km/h</span>
-            </div>
+        <div class="signal-chain" id="signal-chain">
+            <div class="signal-node" id="node-1">Farol A: --m</div>
+            <div class="signal-node" id="node-2">Farol B: --m</div>
         </div>
     </div>
 
     <div class="btn-group">
-        <button id="btn-sim" class="action" onclick="toggleSimulation()">START SIM</button>
-        <button class="action" onclick="resyncCycle()">SYNC GREEN</button>
-        <button id="btn-auto" class="action" onclick="toggleAutoRoute()">AUTO-ROUTE OFF</button>
-        <button class="action" onclick="alert('Ready to connect to Telemetry SDK!')">CONNECT SDK</button>
+        <button id="btn-mode" onclick="toggleSource()">MODO: SIMULAÇÃO</button>
+        <button onclick="resyncCycle()">SINCRONIZAR VERDE</button>
     </div>
 </div>
 
 <script>
-    // Configuration
-    const LIGHT_MODES = {
+    const CONFIG = {
         STRAIGHT: { green: 25, yellow: 4, red: 20 },
-        TURN: { green: 12, yellow: 3, red: 35 }
+        DECISION_ZONE: 600,
+        INERTIA: 0.4
     };
-    const SPEED_BUFFER = 2.5; 
-    const INERTIA_STEP = 0.4;
-    
-    // NEW CRITICAL SETTING: 
-    // Below this distance, we calculate for the light. 
-    // Above this, we maintain road speed.
-    const DECISION_ZONE = 500; 
 
-    // State
-    let isSimMode = false;
-    let isAutoRouteEnabled = false;
-    let currentRoute = 'STRAIGHT';
-    let truckDist = 950; 
-    let truckKmh = 72;
+    let dataSource = 'SIM'; 
+    let truckKmh = 0;
+    let truckDistA = 400;
+    let truckDistB = 900; 
     let roadLimit = 80;
     let cycleStart = Date.now() / 1000;
     let smoothedTargetKmh = 0;
 
-    function setRoute(mode) {
-        currentRoute = mode;
-        document.getElementById('btn-straight').classList.toggle('active', mode === 'STRAIGHT');
-        document.getElementById('btn-turn').classList.toggle('active', mode === 'TURN');
-        resyncCycle();
+    // Função para mostrar/esconder o debug
+    function toggleDebug() {
+        const panel = document.getElementById('debug-panel');
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     }
 
-    function toggleSimulation() {
-        isSimMode = !isSimMode;
-        document.getElementById('btn-sim').innerText = isSimMode ? "STOP SIM" : "START SIM";
-    }
-
-    function toggleAutoRoute() {
-        isAutoRouteEnabled = !isAutoRouteEnabled;
-        const btn = document.getElementById('btn-auto');
-        btn.classList.toggle('active', isAutoRouteEnabled);
-        btn.innerText = isAutoRouteEnabled ? "AUTO-ROUTE ON" : "AUTO-ROUTE OFF";
+    function toggleSource() {
+        dataSource = (dataSource === 'SIM' ? 'SDK' : 'SIM');
+        document.getElementById('btn-mode').innerText = "MODO: " + (dataSource === 'SIM' ? 'SIMULAÇÃO' : 'TELEMETRIA');
+        document.getElementById('btn-mode').classList.toggle('active-telemetry', dataSource === 'SDK');
     }
 
     function resyncCycle() { cycleStart = Date.now() / 1000; }
 
-    function predictSectorSpeed(dist, elapsed, limit) {
-        // CORRECTION: If far away, don't worry about the light yet. 
-        // Maintain the road limit to avoid premature slowing.
-        if (dist > DECISION_ZONE) {
-            return limit; 
-        }
-
-        const cfg = LIGHT_MODES[currentRoute];
-        const total = cfg.green + cfg.yellow + cfg.red;
-        let candidates = [];
-
-        for (let i = 0; i < 3; i++) {
-            let offset = i * total;
-            let toGreen = offset + (total - elapsed) + SPEED_BUFFER;
-            let toRed = offset + (total - elapsed) + cfg.green - SPEED_BUFFER;
-
-            if (i === 0 && elapsed < cfg.green) {
-                toGreen = 0; toRed = (cfg.green - elapsed) - SPEED_BUFFER;
+    function calculateMultiWave(limit) {
+        const elapsed = (Date.now() / 1000 - cycleStart) % 49;
+        
+        function getBestForDist(d) {
+            if (d > CONFIG.DECISION_ZONE) return limit;
+            let bestS = limit;
+            let minDiff = 999;
+            for (let i = 0; i < 2; i++) {
+                let toGreen = (i * 49) + (49 - elapsed) + 2.5;
+                let toRed = toGreen + 25 - 5;
+                if (i === 0 && elapsed < 25) { toGreen = 0; toRed = 25 - elapsed - 2.5; }
+                let vMax = (d / (toGreen || 0.1)) * 3.6;
+                let vMin = (d / toRed) * 3.6;
+                if (vMax >= 20 && vMin <= limit) {
+                    let target = Math.min(limit, vMax);
+                    let diff = Math.abs(target - (truckKmh || limit));
+                    if (diff < minDiff) { minDiff = diff; bestS = target; }
+                }
             }
-
-            let minS = (dist / (toRed > 0 ? toRed : 0.1)) * 3.6;
-            let maxS = (dist / (toGreen > 0 ? toGreen : 0.1)) * 3.6;
-
-            if (minS <= limit && maxS >= 20) {
-                // Focus on the most comfortable speed in the window
-                let ideal = Math.min(limit, (minS + maxS) / 2);
-                candidates.push(ideal);
-            }
+            return bestS;
         }
-
-        if (candidates.length > 0) {
-            // Pick speed closest to current to preserve momentum
-            candidates.sort((a,b) => Math.abs(a - truckKmh) - Math.abs(b - truckKmh));
-            return candidates[0];
-        }
-        return limit; 
+        let targetA = getBestForDist(truckDistA);
+        let targetB = getBestForDist(truckDistB);
+        return (truckDistA < 100) ? targetA : (targetA + targetB) / 2;
     }
 
-    function updateApp() {
-        if (!isSimMode) return;
-
-        if (isAutoRouteEnabled) {
-            if (truckDist < 300 && currentRoute !== 'TURN') setRoute('TURN');
-            else if (truckDist > 800 && currentRoute !== 'STRAIGHT') setRoute('STRAIGHT');
-        }
-
-        const cfg = LIGHT_MODES[currentRoute];
-        const total = cfg.green + cfg.yellow + cfg.red;
-        const elapsed = (Date.now() / 1000 - cycleStart) % total;
-
-        let phase = ""; let color = "";
-        if (elapsed < cfg.green) { phase = "GREEN"; color = "var(--green)"; }
-        else if (elapsed < cfg.green + cfg.yellow) { phase = "YELLOW"; color = "var(--yellow)"; }
-        else { phase = "RED"; color = "var(--red)"; }
-
-        if (truckDist > 5) {
-            truckKmh += (smoothedTargetKmh - truckKmh) * 0.015; 
-            truckDist -= (truckKmh / 3.6) * 0.1;
-        } else {
-            truckDist = 1000; truckKmh = 70;
-        }
-
-        let rawTarget = predictSectorSpeed(truckDist, elapsed, roadLimit);
-        if (smoothedTargetKmh === 0) smoothedTargetKmh = truckKmh;
+    async function update() {
+        const dbStatus = document.getElementById('db-status');
         
-        let diff = rawTarget - smoothedTargetKmh;
-        if (Math.abs(diff) > INERTIA_STEP) smoothedTargetKmh += INERTIA_STEP * Math.sign(diff);
-        else smoothedTargetKmh = rawTarget;
+        if (dataSource === 'SDK') {
+            try {
+                // Tenta buscar do servidor Funbit local
+                const res = await fetch('http://localhost:25555/api/ets2/telemetry');
+                const data = await res.json();
+                
+                // Sucesso: Atualiza Debug e Variáveis
+                dbStatus.innerText = "ONLINE";
+                dbStatus.className = "debug-online";
+                document.getElementById('db-speed').innerText = (data.truck.speed * 3.6).toFixed(2) + " km/h";
+                document.getElementById('db-gear').innerText = data.truck.gear > 0 ? data.truck.gear : (data.truck.gear < 0 ? 'R' : 'N');
+                document.getElementById('db-game').innerText = data.game.connected ? "YES" : "NO";
 
-        const error = Math.abs(truckKmh - smoothedTargetKmh);
-        let feedbackColor = error > 8 ? "var(--red)" : (error > 3 ? "var(--yellow)" : "var(--green)");
+                truckKmh = data.truck.speed * 3.6;
+                roadLimit = data.navigation.speedLimit || 80;
+                // Se o SDK não der distância do farol, mantemos a simulação da distância para teste
+                truckDistA -= (truckKmh / 3.6) * 0.1;
+                truckDistB -= (truckKmh / 3.6) * 0.1;
+
+            } catch (e) {
+                dbStatus.innerText = "CONNECT ERROR";
+                dbStatus.className = "debug-offline";
+            }
+        } else {
+            // Simulação
+            dbStatus.innerText = "SIMULATING";
+            dbStatus.className = "";
+            if (truckDistA > 5) {
+                truckKmh += (smoothedTargetKmh - truckKmh) * 0.02;
+                truckDistA -= (truckKmh / 3.6) * 0.1;
+                truckDistB -= (truckKmh / 3.6) * 0.1;
+            } else { truckDistA = 800; truckDistB = 1300; }
+        }
+
+        let rawTarget = calculateMultiWave(roadLimit);
+        if (smoothedTargetKmh === 0) smoothedTargetKmh = truckKmh;
+        let diff = rawTarget - smoothedTargetKmh;
+        if (Math.abs(diff) > CONFIG.INERTIA) smoothedTargetKmh += CONFIG.INERTIA * Math.sign(diff);
+        else smoothedTargetKmh = rawTarget;
 
         document.getElementById('ui-target-speed').innerText = Math.round(smoothedTargetKmh);
         document.getElementById('ui-truck-speed').innerText = Math.round(truckKmh);
-        document.getElementById('ui-card').style.borderColor = feedbackColor;
-        document.getElementById('ui-distance').innerText = Math.round(truckDist) + " m";
-        document.getElementById('ui-limit').innerText = roadLimit + " km/h";
-        document.getElementById('ui-mode-text').innerText = truckDist > DECISION_ZONE ? "CRUISE PHASE" : "ADAPTIVE PHASE";
-        
-        document.getElementById('phase-dot').style.backgroundColor = color;
-        document.getElementById('phase-text').innerText = phase;
-        document.getElementById('phase-text').style.color = color;
-
+        document.getElementById('node-1').innerText = `A: ${Math.round(truckDistA)}m`;
+        document.getElementById('node-2').innerText = `B: ${Math.round(truckDistB)}m`;
         document.getElementById('current-speed-bar').style.width = (truckKmh / 110 * 100) + "%";
         document.getElementById('target-marker').style.left = (smoothedTargetKmh / 110 * 100) + "%";
     }
 
-    setInterval(updateApp, 100);
+    setInterval(update, 100);
 </script>
 </body>
 </html>
