@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Onda Verde AI - Pro Dashboard</title>
+    <title>Onda Verde AI - Inertia Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -39,59 +39,44 @@
             box-shadow: 0 20px 50px rgba(0,0,0,0.8);
         }
 
-        /* Header Status */
         .header-info {
             display: flex;
             justify-content: space-between;
             margin-bottom: 20px;
             font-size: 12px;
             font-weight: bold;
-            letter-spacing: 1px;
         }
 
         #phase-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
+            width: 12px; height: 12px; border-radius: 50%;
+            display: inline-block; margin-right: 5px;
             box-shadow: 0 0 10px currentColor;
         }
 
-        /* Speed Display */
         .target-label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 2px; }
         .target-speed { font-size: 100px; font-weight: 900; color: var(--accent-green); line-height: 0.9; }
         .unit { font-size: 20px; color: #333; font-weight: bold; }
 
-        /* Comparison Gauge */
         .gauge-area { margin: 30px 0; position: relative; }
         .track { height: 8px; background: #222; border-radius: 4px; position: relative; overflow: hidden; }
         #current-speed-bar { height: 100%; width: 0%; background: var(--accent-blue); transition: width 0.2s linear; }
         #target-marker {
-            position: absolute;
-            top: -4px; width: 4px; height: 16px;
-            background: white; border-radius: 2px;
-            box-shadow: 0 0 10px white;
-            transition: left 0.5s cubic-bezier(0.1, 0, 0.3, 1);
+            position: absolute; top: -4px; width: 4px; height: 16px;
+            background: white; border-radius: 2px; box-shadow: 0 0 10px white;
         }
 
-        /* Stats Grid */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 25px 0; }
         .stat-box { background: #1a1a1a; padding: 15px; border-radius: 20px; border: 1px solid #252525; }
         .stat-val { display: block; font-size: 22px; font-weight: bold; margin-top: 5px; }
 
-        /* Economy Panel */
         .economy-footer {
             background: rgba(0, 255, 106, 0.05);
             border: 1px dashed var(--accent-green);
-            border-radius: 25px;
-            padding: 15px;
-            display: flex;
-            justify-content: space-around;
+            border-radius: 25px; padding: 15px;
+            display: flex; justify-content: space-around;
         }
         .eco-val { color: var(--accent-green); font-weight: bold; display: block; }
 
-        /* Controls */
         .btn-group { margin-top: 20px; display: flex; gap: 10px; }
         button {
             flex: 1; padding: 15px; border-radius: 15px; border: none;
@@ -99,7 +84,6 @@
             background: #222; color: white;
         }
         #btn-sim { border: 1px solid var(--accent-blue); color: var(--accent-blue); }
-        button:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -107,11 +91,11 @@
 <div id="app-container">
     <div class="main-card">
         <div class="header-info">
-            <span><span id="phase-dot"></span> <span id="phase-text">SYNCING</span></span>
-            <span id="route-type">STRAIGHT AHEAD</span>
+            <span><span id="phase-dot"></span> <span id="phase-text">PREDICTING</span></span>
+            <span id="route-type">CRUISE MODE</span>
         </div>
 
-        <span class="target-label">Target Speed</span>
+        <span class="target-label">Constant Target</span>
         <div class="target-speed" id="ui-target-speed">--</div>
         <span class="unit">KM/H</span>
 
@@ -141,115 +125,115 @@
         <button id="btn-sim" onclick="toggleSimulation()">SIMULATION MODE</button>
         <button onclick="resyncCycle()">SIGNAL GREEN NOW</button>
     </div>
-    <button onclick="toggleRoute()" style="width: 100%; margin-top: 10px;">SWITCH ROUTE (Straight/Turn)</button>
 </div>
 
 <script>
     /**
-     * ONDA VERDE AI - CORE ENGINE
-     * All variables in English as requested.
+     * ONDA VERDE AI - INERTIA & PREDICTIVE ENGINE
+     * Focus: Constant speed, minimum braking, heavy vehicle physics.
      */
 
     // Configuration
-    const LIGHT_CYCLES = {
-        STRAIGHT: { green: 25, yellow: 4, red: 20 },
-        TURN: { green: 12, yellow: 3, red: 33 } // Turning routes usually have shorter greens
-    };
-    
-    let currentRouteMode = 'STRAIGHT';
-    const SPEED_BUFFER = 2.0; // Seconds of safety
-    const SMOOTHING_FACTOR = 0.04; // How fast target speed updates (Lerp)
+    const LIGHT_CYCLES = { green: 25, yellow: 4, red: 20 };
+    const SPEED_BUFFER = 2.5; 
+    const MAX_ACCEL_STEP = 0.3; // Maximum speed change per tick (Inertia Filter)
+    const DECISION_HORIZON = 600; // Start planning far away
 
     // State Variables
     let isSimulationActive = false;
-    let truckDistance = 600; // meters
-    let truckSpeed = 45 / 3.6; // m/s
-    let roadSpeedLimit = 60; // km/h
-    let rawTargetSpeed = 0;
-    let smoothedTargetSpeed = 0;
+    let truckDistance = 800; 
+    let truckSpeed = 50 / 3.6; // m/s
+    let roadSpeedLimit = 80; // km/h
     let cycleStartTime = Date.now() / 1000;
-    let lastPhase = "";
     
-    // Economy Data
+    // Prediction Smoothing
+    let currentTargetKmh = 0;
     let fuelSavedTotal = 0;
-    const DIESEL_PRICE = 1.45;
 
     function toggleSimulation() {
         isSimulationActive = !isSimulationActive;
         document.getElementById('btn-sim').innerText = isSimulationActive ? "STOP SIM" : "SIMULATION MODE";
     }
 
-    function toggleRoute() {
-        currentRouteMode = currentRouteMode === 'STRAIGHT' ? 'TURN' : 'STRAIGHT';
-        document.getElementById('route-type').innerText = currentRouteMode === 'STRAIGHT' ? "STRAIGHT AHEAD" : "TURNING ROUTE";
-        resyncCycle();
-    }
-
     function resyncCycle() {
         cycleStartTime = Date.now() / 1000;
     }
 
-    function calculateMultiCycleSpeed(dist, elapsed, limit, cycleSettings) {
-        const totalCycle = cycleSettings.green + cycleSettings.yellow + cycleSettings.red;
-        
-        for (let i = 0; i < 3; i++) { // Check up to 3 cycles ahead
+    /**
+     * PREDICTIVE BRAIN: Looks at multiple cycles and chooses the one
+     * requiring the LEAST speed change (preserving momentum).
+     */
+    function predictBestConstantSpeed(dist, elapsed, limit) {
+        const totalCycle = LIGHT_CYCLES.green + LIGHT_CYCLES.yellow + LIGHT_CYCLES.red;
+        let candidates = [];
+
+        for (let i = 0; i < 3; i++) {
             let cycleOffset = i * totalCycle;
             
-            // Scenario A: Try to catch the CURRENT green if possible
-            if (i === 0 && elapsed < cycleSettings.green) {
-                let timeToRed = (cycleSettings.green - elapsed) - SPEED_BUFFER;
-                let neededSpeed = (dist / timeToRed) * 3.6;
-                if (neededSpeed <= limit && neededSpeed >= 25) return neededSpeed;
+            // Window 1: Catching the GREEN
+            let timeToGreenStart = cycleOffset + (totalCycle - elapsed) + SPEED_BUFFER;
+            let timeToGreenEnd = cycleOffset + (totalCycle - elapsed) + LIGHT_CYCLES.green - SPEED_BUFFER;
+
+            // If we are currently in GREEN
+            if (i === 0 && elapsed < LIGHT_CYCLES.green) {
+                timeToGreenStart = 0;
+                timeToGreenEnd = (LIGHT_CYCLES.green - elapsed) - SPEED_BUFFER;
             }
 
-            // Scenario B: Calculate for the start of future green phases
-            let timeToNextGreen = (cycleOffset + (totalCycle - elapsed)) + SPEED_BUFFER;
-            let neededSpeed = (dist / timeToNextGreen) * 3.6;
+            // Calculate necessary speeds for this window
+            let minSpeed = (dist / (timeToGreenEnd > 0 ? timeToGreenEnd : 0.1)) * 3.6;
+            let maxSpeed = (dist / (timeToGreenStart > 0 ? timeToGreenStart : 0.1)) * 3.6;
 
-            if (neededSpeed <= limit && neededSpeed >= 15) {
-                return neededSpeed;
+            // Check if this window is viable within road limits
+            if (minSpeed <= limit && maxSpeed >= 20) {
+                // Aim for a comfortable speed within this window
+                let idealInWindow = Math.min(limit, maxSpeed);
+                candidates.push(idealInWindow);
             }
         }
-        return limit * 0.7; // Default cruise speed if no green can be caught legally
+
+        if (candidates.length > 0) {
+            let currentKmh = truckSpeed * 3.6;
+            // Sort by proximity to current speed to minimize shifting
+            candidates.sort((a, b) => Math.abs(a - currentKmh) - Math.abs(b - currentKmh));
+            return candidates[0];
+        }
+
+        return limit * 0.75;
     }
 
     function updateApp() {
         if (!isSimulationActive) return;
 
-        const config = LIGHT_CYCLES[currentRouteMode];
-        const totalCycle = config.green + config.yellow + config.red;
+        const totalCycle = LIGHT_CYCLES.green + LIGHT_CYCLES.yellow + LIGHT_CYCLES.red;
         const elapsed = (Date.now() / 1000 - cycleStartTime) % totalCycle;
 
-        // 1. Determine Phase & Visuals
-        let phase = "";
-        let color = "";
-        if (elapsed < config.green) { phase = "GREEN"; color = "var(--accent-green)"; }
-        else if (elapsed < config.green + config.yellow) { phase = "YELLOW"; color = "var(--accent-yellow)"; }
+        // 1. Determine Phase
+        let phase = ""; let color = "";
+        if (elapsed < LIGHT_CYCLES.green) { phase = "GREEN"; color = "var(--accent-green)"; }
+        else if (elapsed < LIGHT_CYCLES.green + LIGHT_CYCLES.yellow) { phase = "YELLOW"; color = "var(--accent-yellow)"; }
         else { phase = "RED"; color = "var(--accent-red)"; }
 
-        // 2. Play Sound on Change (Simplified logic)
-        if (lastPhase !== phase) {
-            console.log(`Phase changed to: ${phase}`);
-            if (lastPhase === "RED" && phase === "GREEN" && truckSpeed > 2) {
-                fuelSavedTotal += 0.30; // Economy logic
-            }
-            lastPhase = phase;
+        // 2. Simulation Physics
+        if (truckDistance > 5) truckDistance -= truckSpeed * 0.1;
+        else truckDistance = 1000;
+
+        // 3. Predictive Calculation
+        let rawTarget = predictBestConstantSpeed(truckDistance, elapsed, roadSpeedLimit);
+
+        // 4. INERTIA FILTER (The smoothing logic)
+        if (currentTargetKmh === 0) currentTargetKmh = truckSpeed * 3.6;
+        
+        let diff = rawTarget - currentTargetKmh;
+        if (Math.abs(diff) > MAX_ACCEL_STEP) {
+            currentTargetKmh += MAX_ACCEL_STEP * Math.sign(diff);
+        } else {
+            currentTargetKmh = rawTarget;
         }
 
-        // 3. Simulation Movement
-        if (truckDistance > 5) truckDistance -= truckSpeed * 0.1;
-        else truckDistance = 800; // Reset simulation loop
-
-        // 4. SMART CALCULATION (The Brain)
-        rawTargetSpeed = calculateMultiCycleSpeed(truckDistance, elapsed, roadSpeedLimit, config);
-
-        // 5. SMOOTHING (Lerp) - Prevents jumps
-        if (smoothedTargetSpeed === 0) smoothedTargetSpeed = rawTargetSpeed;
-        smoothedTargetSpeed += (rawTargetSpeed - smoothedTargetSpeed) * SMOOTHING_FACTOR;
-
-        // 6. UPDATE UI
-        document.getElementById('ui-target-speed').innerText = Math.round(smoothedTargetSpeed);
-        document.getElementById('ui-target-speed').style.color = smoothedTargetSpeed > roadSpeedLimit ? 'var(--accent-red)' : 'var(--accent-green)';
+        // 5. UPDATE UI
+        document.getElementById('ui-target-speed').innerText = Math.round(currentTargetKmh);
+        document.getElementById('ui-target-speed').style.color = currentTargetKmh > roadSpeedLimit ? 'var(--accent-red)' : 'var(--accent-green)';
         
         document.getElementById('ui-distance').innerText = Math.round(truckDistance) + " m";
         document.getElementById('ui-limit').innerText = roadSpeedLimit + " km/h";
@@ -261,14 +245,9 @@
         // Gauges
         const currentKmh = truckSpeed * 3.6;
         document.getElementById('current-speed-bar').style.width = (currentKmh / 100 * 100) + "%";
-        document.getElementById('target-marker').style.left = (smoothedTargetSpeed / 100 * 100) + "%";
-
-        // Economy
-        document.getElementById('ui-fuel').innerText = fuelSavedTotal.toFixed(2) + " L";
-        document.getElementById('ui-money').innerText = "€ " + (fuelSavedTotal * DIESEL_PRICE).toFixed(2);
+        document.getElementById('target-marker').style.left = (currentTargetKmh / 100 * 100) + "%";
     }
 
-    // Run at 10Hz
     setInterval(updateApp, 100);
 </script>
 </body>
