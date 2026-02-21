@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onda Verde AI - ETS2 Edition</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --card-bg: #161616;
+            --accent-green: #00ff41;
+            --accent-blue: #00d4ff;
+            --accent-red: #ff3e3e;
+            --text-main: #eeeeee;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #dashboard {
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .status-badge {
+            background: #333;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 20px;
+            display: inline-block;
+            border: 1px solid #444;
+        }
+
+        .main-card {
+            background: var(--card-bg);
+            border-radius: 30px;
+            padding: 30px;
+            border: 1px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .label {
+            color: #888;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 2px;
+        }
+
+        .target-speed {
+            font-size: 82px;
+            font-weight: 800;
+            color: var(--accent-green);
+            margin: 10px 0;
+            text-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        }
+
+        .unit { font-size: 24px; color: #555; }
+
+        .progress-track {
+            width: 100%;
+            height: 12px;
+            background: #222;
+            border-radius: 6px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background: var(--accent-green);
+            transition: width 0.1s linear, background-color 0.3s;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .info-item {
+            background: #222;
+            padding: 10px;
+            border-radius: 15px;
+        }
+
+        .info-value { font-weight: bold; font-size: 18px; display: block; }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            background: #252525;
+            border: 1px solid #444;
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:active { background: #333; }
+
+        .sim-active { border-color: var(--accent-blue) !important; }
+    </style>
+</head>
+<body>
+
+    <div id="dashboard">
+        <div id="mode-status" class="status-badge">MODO REAL: AGUARDANDO SDK</div>
+
+        <div class="main-card" id="card-container">
+            <span class="label">Velocidade Alvo</span>
+            <div class="target-speed">
+                <span id="v-alvo">--</span>
+                <span class="unit">km/h</span>
+            </div>
+
+            <div class="progress-track">
+                <div id="progress-bar"></div>
+            </div>
+
+            <div id="light-state-label" class="label">SINCRONIZANDO...</div>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="label">Distância</span>
+                    <span id="dist-val" class="info-value">-- m</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Sua Vel.</span>
+                    <span id="curr-speed" class="info-value">-- km/h</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="btn-sim" onclick="toggleSimulation()">ATIVAR MODO SIMULAÇÃO</button>
+            <button onclick="resync()">SINAL ABRIU AGORA (SYNC)</button>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURAÇÕES E ESTADO ---
+        let isSimulating = false;
+        let simDistance = 500;
+        let simSpeed = 13.8; // m/s (~50km/h)
+        
+        // Farol de teste (Mock)
+        let activeLight = {
+            id: "sim_01",
+            coords: { x: 0, z: 0 },
+            cycle: { green: 20, red: 20 },
+            lastGreenStart: Date.now() / 1000,
+            buffer: 2.0
+        };
+
+        // --- MOTOR DE SIMULAÇÃO ---
+        function toggleSimulation() {
+            isSimulating = !isSimulating;
+            const btn = document.getElementById('btn-sim');
+            const status = document.getElementById('mode-status');
+            const card = document.getElementById('card-container');
+
+            if (isSimulating) {
+                btn.innerText = "PARAR SIMULAÇÃO";
+                btn.style.background = "#004466";
+                status.innerText = "MODO SIMULAÇÃO ATIVO";
+                card.classList.add('sim-active');
+            } else {
+                btn.innerText = "ATIVAR MODO SIMULAÇÃO";
+                btn.style.background = "#252525";
+                status.innerText = "MODO REAL: AGUARDANDO SDK";
+                card.classList.remove('sim-active');
+                resetData();
+            }
+        }
+
+        function resetData() {
+            simDistance = 500;
+            document.getElementById('v-alvo').innerText = "--";
+            document.getElementById('dist-val').innerText = "-- m";
+            document.getElementById('curr-speed').innerText = "-- km/h";
+            document.getElementById('progress-bar').style.width = "0%";
+        }
+
+        function resync() {
+            activeLight.lastGreenStart = Date.now() / 1000;
+            console.log("Sincronizado!");
+        }
+
+        // --- LÓGICA DE CÁLCULO (O CORAÇÃO DO APP) ---
+        function update() {
+            if (!isSimulating) return;
+
+            // 1. Simular movimento do caminhão
+            if (simDistance > 5) {
+                simDistance -= simSpeed * 0.1; 
+            } else {
+                simDistance = 800; // Loop da simulação
+            }
+
+            // 2. Cálculo do Ciclo do Semáforo
+            const currentTime = Date.now() / 1000;
+            const cycleTotal = activeLight.cycle.green + activeLight.cycle.red;
+            const elapsed = (currentTime - activeLight.lastGreenStart) % cycleTotal;
+            
+            let timeToArrival = 0;
+            let isGreen = elapsed < activeLight.cycle.green;
+            const progressBar = document.getElementById('progress-bar');
+            const stateLabel = document.getElementById('light-state-label');
+
+            if (isGreen) {
+                // Fase Verde: Tempo restante até fechar - buffer
+                timeToArrival = activeLight.cycle.green - elapsed - activeLight.buffer;
+                stateLabel.innerText = "SINAL VERDE (FECHA EM " + Math.round(timeToArrival) + "s)";
+                progressBar.style.backgroundColor = "var(--accent-green)";
+                progressBar.style.width = ((activeLight.cycle.green - elapsed) / activeLight.cycle.green * 100) + "%";
+            } else {
+                // Fase Vermelha: Tempo restante até abrir + buffer
+                timeToArrival = (cycleTotal - elapsed) + activeLight.buffer;
+                stateLabel.innerText = "SINAL VERMELHO (ABRE EM " + Math.round(timeToArrival - activeLight.buffer) + "s)";
+                progressBar.style.backgroundColor = "var(--accent-red)";
+                progressBar.style.width = ((cycleTotal - elapsed) / activeLight.cycle.red * 100) + "%";
+            }
+
+            // 3. Cálculo da Velocidade Alvo (V = ΔS / Δt)
+            let targetSpeed = (simDistance / timeToArrival) * 3.6;
+
+            // Ajustes de UI
+            if (targetSpeed <= 0 || targetSpeed > 120) targetSpeed = 0;
+            
+            document.getElementById('v-alvo').innerText = Math.round(targetSpeed);
+            document.getElementById('dist-val').innerText = Math.round(simDistance) + " m";
+            document.getElementById('curr-speed').innerText = Math.round(simSpeed * 3.6) + " km/h";
+        }
+
+        // Rodar loop a 10Hz
+        setInterval(update, 100);
+    </script>
+</body>
+</html>
