@@ -3,32 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Onda Verde AI - Map & Voice</title>
+    <title>Onda Verde AI - Pro Version</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        :root { --primary: #28a745; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
+        :root { --primary: #28a745; --danger: #dc3545; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; }
         .container { width: 100%; max-width: 450px; }
         .card { background: var(--card); padding: 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
         
-        /* Dashboard de Velocidade */
         .vel-alvo { font-size: 5rem; font-weight: 900; color: var(--primary); margin: 0; }
-        .dist-info { font-size: 1.1rem; color: #007bff; font-weight: bold; margin-bottom: 10px; }
+        .dist-info { font-size: 1.1rem; color: #007bff; font-weight: bold; margin-bottom: 5px; }
         
-        /* Mapa */
-        #map { height: 250px; width: 100%; border-radius: 15px; margin: 15px 0; border: 1px solid #333; z-index: 1; }
+        #map { height: 220px; width: 100%; border-radius: 15px; margin: 15px 0; border: 1px solid #333; z-index: 1; }
 
-        /* Interface */
-        select, input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #444; background: #2a2a2a; color: white; }
+        select, input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #444; background: #2a2a2a; color: white; font-size: 1rem; }
         button { width: 100%; padding: 15px; margin: 5px 0; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        
         .btn-green { background: var(--primary); color: white; height: 70px; font-size: 1.2rem; }
         .btn-save { background: #444; color: white; }
+        .btn-delete { background: var(--danger); color: white; font-size: 0.8rem; padding: 10px; margin-bottom: 10px; }
         .btn-reset { background: #ffc107; color: #000; }
-        .status { color: #aaa; font-size: 0.8rem; margin-top: 10px; min-height: 20px; }
+        
+        .status { color: #aaa; font-size: 0.8rem; margin-top: 10px; min-height: 20px; background: rgba(0,0,0,0.2); border-radius: 5px; padding: 5px; }
     </style>
 </head>
 <body>
@@ -39,19 +39,20 @@
         
         <div id="distancia-display" class="dist-info">Aguardando GPS...</div>
         <div class="vel-alvo" id="vel-alvo">0</div>
-        <div style="color: #888; font-size: 0.8rem; margin-bottom: 10px;">KM/H RECOMENDADOS</div>
+        <div style="color: #888; font-size: 0.8rem; margin-bottom: 5px;">KM/H RECOMENDADOS</div>
 
         <div id="map"></div>
 
         <select id="lista-farois" onchange="selecionarFarol(this.value)">
-            <option value="">A carregar faróis próximos...</option>
+            <option value="">Localizando pontos próximos...</option>
         </select>
         
         <button class="btn-save" onclick="salvarFarol()">+ SALVAR LOCAL ATUAL</button>
+        <button class="btn-delete" onclick="eliminarFarol()">LIMPAR PONTO SELECIONADO</button>
         
         <hr style="border: 0.5px solid #333; margin: 15px 0;">
 
-        <div style="display: flex; gap: 10px; align-items: center; justify-content: center;">
+        <div style="display: flex; gap: 10px; align-items: center; justify-content: center; margin-bottom: 10px;">
             <label>Ciclo (s):</label>
             <input type="number" id="tempo-ciclo" value="30" style="width: 80px;">
         </div>
@@ -59,7 +60,7 @@
         <button class="btn-green" onclick="iniciarOnda()">PARTIR AGORA!</button>
         <button class="btn-reset" onclick="resetarCiclo()">REINICIAR TEMPO</button>
         
-        <div class="status" id="status">Inicie o GPS para ver o mapa.</div>
+        <div class="status" id="status">Selecione um ponto e clique em Partir.</div>
     </div>
 </div>
 
@@ -67,24 +68,25 @@
     let listaFarois = JSON.parse(localStorage.getItem('meusFarois')) || [];
     let destino = null;
     let watchId = null;
-    let timerCronometro = null;
-    let tempoAtual = 0;
+    let horaFinalEsperada = 0;
     let ultimaVoz = 0;
-    
-    // Variáveis do Mapa
     let mapa, marcadorUser, marcadorFarol;
     const noSleep = new NoSleep();
 
-    // Tentar carregar posição inicial para o mapa
+    // Iniciar GPS para o mapa e organização
     navigator.geolocation.getCurrentPosition(pos => {
         atualizarMapa(pos.coords.latitude, pos.coords.longitude);
         organizarListaPorProximidade();
     }, err => {
-        document.getElementById('status').innerText = "Erro inicial: " + err.message;
+        document.getElementById('status').innerText = "Erro GPS: " + err.message;
     }, { enableHighAccuracy: true });
+
+    // Atualiza a cada 10s para manter a lista ordenada conforme você se move
+    setInterval(organizarListaPorProximidade, 10000);
 
     function falar(texto) {
         if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); // Para falas anteriores
             const utterance = new SpeechSynthesisUtterance(texto);
             utterance.lang = 'pt-BR';
             window.speechSynthesis.speak(utterance);
@@ -94,9 +96,7 @@
     function atualizarMapa(lat, lon) {
         if (!mapa) {
             mapa = L.map('map').setView([lat, lon], 16);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
-            }).addTo(mapa);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
             marcadorUser = L.marker([lat, lon]).addTo(mapa).bindPopup("Você");
         } else {
             marcadorUser.setLatLng([lat, lon]);
@@ -105,15 +105,27 @@
     }
 
     function salvarFarol() {
-        document.getElementById('status').innerText = "Obtendo GPS...";
         navigator.geolocation.getCurrentPosition(pos => {
-            const nome = prompt("Nome do Farol:");
+            const nome = prompt("Nome do ponto:");
             if (!nome) return;
-            const novo = { nome, lat: pos.coords.latitude, lon: pos.coords.longitude };
-            listaFarois.push(novo);
+            listaFarois.push({ nome, lat: pos.coords.latitude, lon: pos.coords.longitude });
             localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
             organizarListaPorProximidade();
+            document.getElementById('status').innerText = "Ponto salvo!";
         }, null, { enableHighAccuracy: true });
+    }
+
+    function eliminarFarol() {
+        const select = document.getElementById('lista-farois');
+        const index = select.value;
+        if (index === "" || !confirm("Deseja apagar este ponto permanentemente?")) return;
+        
+        listaFarois.splice(index, 1);
+        localStorage.setItem('meusFarois', JSON.stringify(listaFarois));
+        destino = null;
+        if (marcadorFarol) mapa.removeLayer(marcadorFarol);
+        organizarListaPorProximidade();
+        document.getElementById('status').innerText = "Ponto removido.";
     }
 
     function organizarListaPorProximidade() {
@@ -131,7 +143,7 @@
 
     function atualizarSelect() {
         const select = document.getElementById('lista-farois');
-        select.innerHTML = '<option value="">Selecione um Farol</option>';
+        select.innerHTML = '<option value="">Selecione um Ponto</option>';
         listaFarois.forEach((f, i) => { 
             const dist = f.distTemp ? `(${(f.distTemp/1000).toFixed(2)}km)` : "";
             select.innerHTML += `<option value="${i}">${f.nome} ${dist}</option>`; 
@@ -143,26 +155,24 @@
         if (destino) {
             if (marcadorFarol) mapa.removeLayer(marcadorFarol);
             marcadorFarol = L.circle([destino.lat, destino.lon], { color: 'red', radius: 20 }).addTo(mapa);
-            mapa.fitBounds(L.latLngBounds([marcadorUser.getLatLng(), [destino.lat, destino.lon]]), { padding: [50, 50] });
-            document.getElementById('status').innerText = "Destino: " + destino.nome;
+            mapa.panTo([destino.lat, destino.lon]);
         }
     }
 
     function resetarCiclo() {
-        tempoAtual = parseInt(document.getElementById('tempo-ciclo').value);
+        const segundos = parseInt(document.getElementById('tempo-ciclo').value);
+        horaFinalEsperada = Date.now() + (segundos * 1000);
         falar("Reiniciado");
     }
 
     function iniciarOnda() {
-        if (!destino) return alert("Selecione um farol!");
+        if (!destino) return alert("Selecione um ponto primeiro!");
         noSleep.enable();
-        falar("Iniciando monitoramento");
         
-        tempoAtual = parseInt(document.getElementById('tempo-ciclo').value);
-        if (watchId) navigator.geolocation.clearWatch(watchId);
-        if (timerCronometro) clearInterval(timerCronometro);
+        const segundos = parseInt(document.getElementById('tempo-ciclo').value);
+        horaFinalEsperada = Date.now() + (segundos * 1000);
 
-        timerCronometro = setInterval(() => { if (tempoAtual > 0) tempoAtual--; }, 1000);
+        if (watchId) navigator.geolocation.clearWatch(watchId);
 
         watchId = navigator.geolocation.watchPosition(pos => {
             const lat = pos.coords.latitude;
@@ -172,11 +182,14 @@
             const d = calcularDistancia(lat, lon, destino.lat, destino.lon);
             document.getElementById('distancia-display').innerText = `Distância: ${Math.round(d)} m`;
 
-            if (tempoAtual > 0 && d > 10) {
-                let vKmh = ((d / tempoAtual) * 3.6).toFixed(1);
+            let tempoRestante = Math.max(0, (horaFinalEsperada - Date.now()) / 1000);
+
+            if (tempoRestante > 0 && d > 10) {
+                let vKmh = ((d / tempoRestante) * 3.6).toFixed(1);
                 document.getElementById('vel-alvo').innerText = vKmh > 120 ? "---" : vKmh;
-                
-                if (Date.now() - ultimaVoz > 12000) {
+                document.getElementById('status').innerText = `Tempo: ${Math.round(tempoRestante)}s | GPS Ativo`;
+
+                if (Date.now() - ultimaVoz > 12000 && vKmh <= 120) {
                     falar(`Velocidade ${Math.round(vKmh)}`);
                     ultimaVoz = Date.now();
                 }
@@ -184,6 +197,9 @@
                 document.getElementById('vel-alvo').innerText = "OK";
                 falar("Chegou!");
                 pararTudo();
+            } else {
+                document.getElementById('vel-alvo').innerText = "---";
+                document.getElementById('status').innerText = "Tempo esgotado!";
             }
         }, err => {
             document.getElementById('status').innerText = "Erro GPS: " + err.message;
@@ -192,7 +208,6 @@
 
     function pararTudo() {
         if (watchId) navigator.geolocation.clearWatch(watchId);
-        if (timerCronometro) clearInterval(timerCronometro);
         noSleep.disable();
     }
 
@@ -206,6 +221,5 @@
         return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
     }
 </script>
-
 </body>
 </html>
